@@ -1,6 +1,6 @@
 {
-  "model_repo": "unsloth/Qwen3.6-27B-MTP-GGUF",
-  "model_name": "qwen3.6-27b-mtp",
+  "model_repo": "legacy production model",
+  "model_name": "legacy cached assessment",
   "endpoint_type": "Modal-hosted llama.cpp OpenAI-compatible endpoint",
   "generated_at": "2026-06-07",
   "examples": {

@@ -7,7 +7,7 @@ Custom frontend
   -> queued Gradio backend
   -> OpenAI Python SDK
   -> deployed/local OpenAI-compatible endpoint
-  -> unsloth/Qwen3.6-27B-MTP-GGUF
+  -> unsloth/Qwen3.5-4B-MTP-GGUF
 ```
 
 ## Modal configuration
@@ -15,8 +15,8 @@ Custom frontend
 The app permanently defaults to the deployed experiment endpoint and model:
 
 ```text
-https://abidali899--pakistan-scam-checker-qwen36-mtp-serve.modal.run
-qwen3.6-27b-mtp
+https://abidali899--pakistan-scam-checker-qwen35-4b-q8-serve.modal.run
+qwen3.5-4b-q8
 ```
 
 The endpoint uses Modal proxy authentication. Set its dedicated proxy token
@@ -47,7 +47,7 @@ endpoint and exits unsuccessfully unless the response includes:
 For vision verification, run the experiment's existing image test:
 
 ```powershell
-python experiments/modal_qwen36_mtp/test_request.py --images
+python experiments/modal_qwen35_4b_q8/test_request.py
 ```
 
 ## Troubleshooting

@@ -1,0 +1,326 @@
+{
+  "candidate_endpoint": "https://abidali899--pakistan-scam-checker-qwen35-4b-q8-serve.modal.run",
+  "candidate_model": "qwen3.5-4b-q8",
+  "judge_endpoint": "https://abidali899--pakistan-scam-checker-qwen36-mtp-serve.modal.run",
+  "judge_model": "qwen3.6-27b-mtp",
+  "passed": false,
+  "pass_count": 9,
+  "case_count": 10,
+  "average_score": 89.5,
+  "results": [
+    {
+      "case": "text_phishing",
+      "seconds": 21.29,
+      "expected_behavior": "Suspicious or Likely scam. It must identify the untrusted payment link, urgency, payment demand, and threat.",
+      "candidate": {
+        "risk_label": "Likely scam",
+        "simple_explanation": "This message claims to be from Pakistan Post but uses a suspicious URL ending in '.example' and demands immediate payment to prevent destruction, which is a common phishing tactic.",
+        "red_flags": [
+          "Suspicious URL with '.example' domain",
+          "Urgency to pay immediately",
+          "Threat of parcel destruction",
+          "Request for payment via unverified link"
+        ],
+        "safe_next_steps": [
+          "Do not click the link or provide any payment information.",
+          "Contact Pakistan Post directly using their official phone number or website found on their verified social media pages.",
+          "Report the message to your mobile carrier or local authorities."
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 100,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identifies the message as a 'Likely scam'. It accurately grounds its claims in the provided text by citing the suspicious '.example' domain, the urgency, the threat of destruction, and the payment demand. The safe next steps explicitly advise against clicking the link or paying, and suggest contacting the official entity through verified channels, avoiding any untrusted contact details. All fields are present, useful, and internally consistent.",
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "case": "text_irrelevant",
+      "seconds": 4.71,
+      "expected_behavior": "Looks normal because this is not a notice or scam-checking input.",
+      "candidate": {
+        "risk_label": "Looks normal",
+        "simple_explanation": "This does not appear to be a notice or message that needs scam checking.",
+        "red_flags": [
+          "Input is not a notice or message"
+        ],
+        "safe_next_steps": [
+          "Only use this tool for checking notices, bills, alerts, and suspicious messages."
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 100,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identified the input as irrelevant to scam checking, matching the reference expectation. The explanation is grounded in the text, and the safe next steps appropriately advise on tool usage without recommending engagement with suspicious entities. All fields are present and consistent.",
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "case": "text_inappropriate",
+      "seconds": 4.97,
+      "expected_behavior": "Inappropriate because the input is abusive.",
+      "candidate": {
+        "risk_label": "Inappropriate",
+        "simple_explanation": "This input contains offensive or inappropriate content and is not a notice or message for scam checking. Please use this tool for its intended purpose.",
+        "red_flags": [
+          "Inappropriate or offensive input"
+        ],
+        "safe_next_steps": [
+          "This tool is for checking Pakistani notices and messages. Please submit a relevant notice or alert."
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 100,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identified the input as 'Inappropriate' matching the reference expectation. The explanation accurately reflects the abusive nature of the text ('stupid idiot', 'garbage'). The safe next steps appropriately direct the user to use the tool for its intended purpose without engaging with the abuse or providing unsafe contact details. All fields are present and consistent.",
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "case": "image_fake_courier",
+      "seconds": 22.62,
+      "expected_behavior": "Suspicious or Likely scam. The screenshot shows a failed-delivery parcel message with a clickable rearrangement link. Branding alone must not be treated as proof of legitimacy.",
+      "candidate": {
+        "risk_label": "Verify first",
+        "simple_explanation": "This looks like a common courier scam message. The sender name is generic ('POST OFFICE') and the message asks you to click a link to 'rearrange' delivery. Official Pakistan Post messages usually come from a specific branch or use a different format. Do not click the link.",
+        "red_flags": [
+          "Generic sender name ('POST OFFICE')",
+          "Urgent request to click a link",
+          "Common scam script about failed delivery"
+        ],
+        "safe_next_steps": [
+          "Do not click the link in the message.",
+          "Contact your local Pakistan Post branch directly using a known phone number.",
+          "Check your official Pakistan Post account or website for delivery status.",
+          "Report the message to your mobile carrier if it was sent via SMS."
+        ],
+        "reply_draft": "This message appears to be a common courier scam. Do not click the link. Contact Pakistan Post directly to verify your parcel status."
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 95,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identifies the message as a likely scam, aligning with the reference expectation. The explanation is grounded in visible evidence (generic sender name, suspicious link). The safe next steps are appropriate and avoid engaging with the suspicious content.",
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "case": "image_roman_urdu_prize",
+      "seconds": 10.96,
+      "expected_behavior": "Suspicious or Likely scam. It offers an iPhone/gifts and redirects the recipient to a visible WhatsApp phone number.",
+      "candidate": {
+        "risk_label": "Likely scam",
+        "simple_explanation": "This message claims you won electronics and gifts but asks you to contact a different number on WhatsApp. This is a common pattern used to trick people into sharing personal info or paying fees.",
+        "red_flags": [
+          "Unsolicited message offering free prizes",
+          "Request to contact via a different phone number",
+          "Urgency implied by 'sunahri moka' (golden opportunity)",
+          "Generic greeting with redacted name",
+          "No official sender name or logo visible"
+        ],
+        "safe_next_steps": [
+          "Do not click any links or reply to this message",
+          "Do not contact the number 03405140972",
+          "Do not share personal information, OTPs, or bank details",
+          "Report the message to your carrier (Telenor) or block the sender",
+          "If you received a similar message before, check your bank statements for unauthorized charges"
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 100,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identifies the message as a likely scam. The explanation accurately reflects the content of the image (unsolicited prize offer, redirection to WhatsApp). The safe next steps explicitly advise against contacting the suspicious number found in the image and do not recommend engaging with the sender. All fields are useful and consistent.",
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "case": "text_bank_otp",
+      "seconds": 6.68,
+      "expected_behavior": "Likely scam because it requests an OTP and threatens an account block.",
+      "candidate": {
+        "risk_label": "Likely scam",
+        "simple_explanation": "This message claims to be from HBL but asks the user to send an OTP to a 'support agent.' Legitimate banks never ask for OTPs via SMS or ask users to send them to anyone other than the official app or website.",
+        "red_flags": [
+          "Asks for OTP via SMS",
+          "Claims account will be blocked",
+          "Instructs to contact 'support agent' outside official channels",
+          "Uses urgency to pressure the user"
+        ],
+        "safe_next_steps": [
+          "Do not send the OTP.",
+          "Do not reply to the message.",
+          "Verify the alert directly through the official HBL mobile app or website.",
+          "Report the message to HBL customer care."
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 100,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identifies the message as a likely scam based on the request for an OTP and the threat of account blocking, which aligns with the reference expectation. The explanation is grounded in the provided text. The safe next steps correctly advise against sharing the OTP or engaging with the sender, and suggest verifying through official channels. All fields are present, useful, and internally consistent.",
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "case": "text_fbr_refund",
+      "seconds": 6.04,
+      "expected_behavior": "Likely scam because it requests CNIC and card details through an untrusted refund link.",
+      "candidate": {
+        "risk_label": "Likely scam",
+        "simple_explanation": "This message claims to be from the Federal Board of Revenue (FBR) but uses a fake website URL and asks for sensitive personal and financial information, which is a common phishing tactic.",
+        "red_flags": [
+          "Fake official domain (example.com)",
+          "Request for CNIC and bank card details",
+          "Urgent tone implying eligibility for a refund"
+        ],
+        "safe_next_steps": [
+          "Do not click the link or provide any personal information.",
+          "Verify with the official FBR website or contact center directly.",
+          "Report the message to your mobile carrier or relevant authorities."
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 100,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identifies the message as a likely scam, aligning with the reference expectation. The explanation and red flags are grounded in the provided text (identifying the suspicious URL and request for sensitive data). The safe next steps appropriately advise against clicking links or sharing information and suggest verifying through official channels. All fields are present, useful, and internally consistent.",
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "case": "text_legitimate_courier",
+      "seconds": 4.95,
+      "expected_behavior": "Looks normal or Verify first. It must not call this a likely scam because no action, payment, credential, or link is requested.",
+      "candidate": {
+        "risk_label": "Looks normal",
+        "simple_explanation": "This does not appear to be a notice or message that needs scam checking.",
+        "red_flags": [
+          "Input is not a notice or message"
+        ],
+        "safe_next_steps": [
+          "Only use this tool for checking notices, bills, alerts, and suspicious messages."
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 100,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identifies the message as 'Looks normal', aligning with the reference expectation that it is not a likely scam since no action or payment is requested. The explanation and red flags are internally consistent with the label, and the safe next steps do not recommend engaging with suspicious elements. The empty reply_draft is acceptable given the low-risk assessment.",
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "case": "text_legitimate_appointment",
+      "seconds": 6.21,
+      "expected_behavior": "Looks normal or Verify first. It refers the user to a number already on their appointment card and contains no payment or credential demand.",
+      "candidate": {
+        "risk_label": "Looks normal",
+        "simple_explanation": "This does not appear to be a notice or message that needs scam checking.",
+        "red_flags": [
+          "Input is not a notice or message"
+        ],
+        "safe_next_steps": [
+          "Only use this tool for checking notices, bills, alerts, and suspicious messages."
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "fail",
+        "score": 0,
+        "risk_label_correct": true,
+        "evidence_grounded": false,
+        "safe_guidance": false,
+        "contract_valid": false,
+        "reason": "The candidate assessment fails because it incorrectly classifies the input as 'not a notice or message' and refuses to evaluate it, despite the input being a clear text message (SMS) regarding an appointment. The reference expectation explicitly states the message 'Looks normal' because it refers to a number on an appointment card and lacks payment demands. The candidate's refusal to analyze the content ('Input is not a notice or message') is factually incorrect and unhelpful. Furthermore, the 'safe_next_steps' advises the user to only use the tool for other types of messages, effectively dismissing the user's current concern without providing the requested safety assessment. This constitutes a failure to provide useful, grounded, and consistent advice.",
+        "passed": false
+      },
+      "passed": false
+    },
+    {
+      "case": "text_prize_whatsapp",
+      "seconds": 6.13,
+      "expected_behavior": "Suspicious or Likely scam because of the unsolicited prize, urgency, and WhatsApp redirection.",
+      "candidate": {
+        "risk_label": "Likely scam",
+        "simple_explanation": "This message is a classic prize giveaway scam. Legitimate organizations do not ask for personal details or payments to claim free gifts, and they do not use WhatsApp for such announcements.",
+        "red_flags": [
+          "Unsolicited prize announcement",
+          "Request to contact via WhatsApp",
+          "Generic phone number",
+          "No official sender identification"
+        ],
+        "safe_next_steps": [
+          "Do not click any links or call the number.",
+          "Do not share personal information.",
+          "Report the message to your mobile carrier.",
+          "Block the sender."
+        ],
+        "reply_draft": ""
+      },
+      "candidate_raw": "",
+      "judgment": {
+        "verdict": "pass",
+        "score": 100,
+        "risk_label_correct": true,
+        "evidence_grounded": true,
+        "safe_guidance": true,
+        "contract_valid": true,
+        "reason": "The candidate correctly identifies the message as a 'Likely scam', matching the reference expectation. The explanation and red flags are grounded in the provided text (unsolicited prize, WhatsApp redirection, generic number). The safe next steps explicitly advise against engaging with the suspicious contact details (do not call, do not click links) and do not recommend any unsafe actions. All fields are present, useful, and internally consistent.",
+        "passed": true
+      },
+      "passed": true
+    }
+  ]
+}

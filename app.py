@@ -27,9 +27,9 @@ DISCLAIMER = (
 )
 RISK_LABELS = ("Looks normal", "Verify first", "Suspicious", "Likely scam", "Inappropriate")
 DEFAULT_MODEL_BASE_URL = (
-    "https://abidali899--pakistan-scam-checker-qwen36-mtp-serve.modal.run"
+    "https://abidali899--pakistan-scam-checker-qwen35-4b-q8-serve.modal.run"
 )
-DEFAULT_MODEL_NAME = "qwen3.6-27b-mtp"
+DEFAULT_MODEL_NAME = "qwen3.5-4b-q8"
 REQUIRED_FIELDS = {
     "risk_label",
     "simple_explanation",
@@ -49,6 +49,10 @@ Suspicious and clarification may be useful. For Looks normal, Likely scam, or
 Inappropriate, reply_draft must be an empty string. Never encourage engagement
 with a scammer.
 Use exactly one risk label: Looks normal, Verify first, Suspicious, Likely scam, Inappropriate.
+Appointment reminders, shipment updates, bills, alerts, and other informational
+communications are notices or messages and must be assessed normally. Do not use
+the irrelevant-input response merely because a legitimate-looking notice has no
+scam indicators.
 
 If the input is irrelevant but harmless — such as a random photo, a selfie, a landscape,
 a pet photo, a meme, gibberish text, casual conversation, a question, or anything that
