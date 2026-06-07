@@ -40,7 +40,8 @@ REQUIRED_FIELDS = {
 EXAMPLE_CACHE_PATH = ROOT / "data" / "example_assessments.json"
 
 SYSTEM_PROMPT = """Assess Pakistani notices and messages for scam risk.
-Return only JSON matching the schema. Use simple, calm English.
+Return only JSON matching the schema. Use the response language requested by
+the user. Default to simple, calm English.
 
 Apply this label rubric strictly:
 - Looks normal: a relevant notice with no meaningful scam indicator and no
@@ -306,12 +307,19 @@ def call_model(
     text: str,
     image_data_url: str,
     telemetry: dict[str, Any] | None = None,
+    output_language: str = "en",
 ) -> dict[str, Any]:
     telemetry = telemetry if telemetry is not None else {}
     client, model_name = create_model_client()
+    language_instruction = (
+        "Write all user-facing JSON values in clear Urdu script."
+        if output_language == "ur"
+        else "Write all user-facing JSON values in simple English."
+    )
     prompt = (
         "Assess the following Pakistani notice or message for scam risk. "
-        "Explain visible evidence and give safe next steps.\n\n"
+        "Explain visible evidence and give safe next steps. "
+        f"{language_instruction}\n\n"
         f"Message text:\n{text.strip() or '[No text supplied; inspect the image.]'}"
     )
     content: Any = prompt
@@ -392,11 +400,13 @@ def analyze_notice(
     image_data_url: str = "",
     example_id: str = "",
     save_trace: bool = True,
+    output_language: str = "en",
 ) -> dict[str, Any]:
     """Analyze supplied text/image using the configured model only."""
     text = (text or "").strip()
     image_data_url = image_data_url or ""
     example_id = (example_id or "").strip()
+    output_language = "ur" if output_language == "ur" else "en"
 
     def finish(
         response: dict[str, Any],
@@ -451,7 +461,11 @@ def analyze_notice(
         )
     telemetry: dict[str, Any] = {}
     try:
-        result = call_model(text, image_data_url, telemetry)
+        result = (
+            call_model(text, image_data_url, telemetry, output_language="ur")
+            if output_language == "ur"
+            else call_model(text, image_data_url, telemetry)
+        )
         return finish(
             {
                 "ok": True,
@@ -493,8 +507,15 @@ def analyze_api(
     image_data_url: str = "",
     example_id: str = "",
     save_trace: bool = True,
+    output_language: str = "en",
 ) -> dict[str, Any]:
-    return analyze_notice(text, image_data_url, example_id, save_trace)
+    return analyze_notice(
+        text,
+        image_data_url,
+        example_id,
+        save_trace,
+        output_language,
+    )
 
 
 @app.api(name="status", description="Return model and privacy status.", queue=False)
