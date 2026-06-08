@@ -10,21 +10,24 @@ pinned: true
 license: mit
 tags:
 - backyard-ai
-- build-small-hackathon
-- gradio
-- llama.cpp
-- modal
-- qwen
+- off-brand
+- tiny-titan
+- llama-champion
+- codex
+- openai-track
+- sharing-is-caring
+- field-notes
+- modal-awards
+- bonus-quest-champion
+- best-demo
+- qwen-35-4b
 - gguf
-- multimodal
 - vision-language-model
 - scam-detection
 - online-safety
 - pakistan
 - urdu
 - bilingual
-- roman-urdu
-- openai-compatible
 short_description: Check Pakistani notices for scam risks in English or Urdu.
 ---
 
@@ -55,22 +58,32 @@ mixed-language inputs are also supported.
 | Build story | [Building Pakistan Notice Helper](https://huggingface.co/blog/build-small-hackathon/building-pakistan-notice-helper) |
 | Social post | [Project announcement on LinkedIn](https://www.linkedin.com/posts/1abidaliawan_after-3-straight-days-of-building-testing-ugcPost-7469716521095794688-TlqZ/) |
 
-## Hackathon Fit
+## Idea and Tech
 
 This is a **Backyard AI** submission for the
 [Build Small. Play Big. Hackathon](https://huggingface.co/build-small-hackathon).
-It applies a small model to a practical regional safety problem.
+It applies a small model to a practical regional safety problem: helping people
+in Pakistan understand unfamiliar notices before they pay, reply, click a link,
+or share personal information.
+
+The app combines a custom bilingual interface built on `gradio.Server` with
+Qwen3.5-4B Q8_0, served by a CUDA-enabled `llama.cpp` OpenAI-compatible endpoint
+on a Modal L4 GPU. It accepts text or screenshots, structures the model response
+into an actionable risk assessment, and can publish privacy-safe workflow
+traces only after explicit user consent.
+
+## Hackathon Fit
 
 | Area | Project evidence |
 | --- | --- |
 | Core constraints | Public Gradio Space using Qwen3.5-4B, below the 32B limit |
-| Backyard AI | A real user tested the phone workflow and plans to use it for future suspicious messages |
-| Modal | Qwen3.5-4B is hosted on a Modal L4 GPU endpoint |
-| Tiny Titan | The 4B Q8 model passed the final 10-case internal regression suite |
-| Llama Champion | Qwen3.5-4B runs through a CUDA-enabled `llama.cpp` server using its OpenAI-compatible API |
-| Off-Brand | Custom mobile-first HTML, CSS, and JavaScript interface served through `gradio.Server` instead of the default Gradio UI |
-| Sharing is Caring | Privacy-safe workflow traces are published as a Hugging Face dataset |
-| Field Notes | Published a blog in the Build Small Hackathon organization sharing my opinions, development experience, model experiments, and lessons learned |
+| Backyard AI track | A real user tested the phone workflow and plans to use it for future suspicious messages |
+| Off Brand badge | Custom mobile-first HTML, CSS, and JavaScript interface served through `gradio.Server` instead of the default Gradio UI |
+| Tiny Titan badge | The 4B Q8 model passed the final 10-case internal regression suite |
+| Best Demo badge | Public demo video, social post, live Space, source repository, and build story are linked above |
+| Bonus Quest Champion badge | Meets the Backyard AI, Off Brand, Tiny Titan, Best Demo, Modal, open-source, and privacy-safe trace-sharing criteria |
+| Modal sponsor prize | Qwen3.5-4B is hosted on a Modal L4 GPU endpoint |
+| OpenAI sponsor prize | Codex was used throughout development with attributed commits in the connected repository |
 
 ## Demo and User Feedback
 
