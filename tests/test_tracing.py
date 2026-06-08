@@ -127,6 +127,61 @@ class TraceTests(unittest.TestCase):
         ))
         self.assertEqual(next(iter(text_record)), "trace_id")
 
+    def test_image_trace_uses_model_assessment_for_fixed_description(self) -> None:
+        assessment = {
+            "risk_label": "Suspicious",
+            "simple_explanation": (
+                "The screenshot claims a Pakistan Post parcel delivery failed "
+                "and demands an immediate address update through a short link."
+            ),
+            "red_flags": [
+                "Unknown sender with no official courier branding.",
+                "Urgent delivery action through a suspicious URL.",
+            ],
+            "safe_next_steps": ["Contact the courier through its official app."],
+            "reply_draft": "",
+        }
+        record = trace_runtime.build_trace_record(
+            text="",
+            image_data_url="data:image/png;base64,PRIVATE_IMAGE_BYTES",
+            example_id="",
+            assessment=assessment,
+        )
+
+        self.assertEqual(record["input_category"], "courier")
+        self.assertTrue(record["urgency"])
+        self.assertEqual(
+            record["input"],
+            "image: Courier-style content with link, urgency, courier signals",
+        )
+        self.assertIn("Known courier pattern", record["result_summary"])
+        serialized = json.dumps(record)
+        self.assertNotIn(assessment["simple_explanation"], serialized)
+        self.assertNotIn(assessment["red_flags"][0], serialized)
+        self.assertNotIn("PRIVATE_IMAGE_BYTES", serialized)
+
+    def test_urdu_image_assessment_maps_to_traffic_challan(self) -> None:
+        record = trace_runtime.build_trace_record(
+            text="",
+            image_data_url="data:image/jpeg;base64,PRIVATE_IMAGE_BYTES",
+            example_id="",
+            assessment={
+                "risk_label": "Likely scam",
+                "simple_explanation": (
+                    "یہ ٹریفک چالان کی فوری ادائیگی کے لیے مشکوک لنک استعمال کرتا ہے۔"
+                ),
+                "red_flags": ["آج جرمانہ ادا کرنے کا دباؤ"],
+                "safe_next_steps": ["سرکاری ذریعے سے تصدیق کریں۔"],
+                "reply_draft": "",
+            },
+        )
+
+        self.assertEqual(record["input_category"], "traffic_challan")
+        self.assertTrue(record["urgency"])
+        self.assertIn("Traffic-challan-style", record["input"])
+        self.assertIn("link", record["scam_tactics"])
+        self.assertIn("payment", record["scam_tactics"])
+
     def test_opt_out_does_not_queue_trace(self) -> None:
         with patch("app.queue_trace") as queue_mock:
             result = app.analyze_notice("", "", save_trace=False)

@@ -28,8 +28,11 @@ Helper scam-check requests. It does not contain hidden model reasoning or
 autonomous-agent trajectories.
 
 The application uses a Modal-hosted Qwen model for normal assessments. Creating
-a trace never calls an AI model. Traces only observe the existing request path
-and convert it into allow-listed categories, booleans, buckets, and counts.
+a trace never makes an additional AI model call. Traces only observe the
+existing request path and convert it into allow-listed categories, booleans,
+and fixed descriptions. For image submissions, the existing assessment's
+explanation and red flags may be inspected transiently for this mapping, but
+their text is not stored.
 
 ## Fields
 
@@ -70,9 +73,9 @@ credentials, addresses, tracking IDs, long numbers, and title-case names or
 entities. Regex redaction cannot guarantee removal of every possible
 identifier, so users should opt out when submitting sensitive content.
 
-Images store only fixed descriptions; screenshots and OCR text are not stored.
-Users see a checked trace disclosure in the app and may opt out before each
-request.
+Images store only fixed descriptions. Screenshots, OCR text, model explanations,
+and model red flags are not stored. Users see a checked trace disclosure in the
+app and may opt out before each request.
 
 ## Provenance
 

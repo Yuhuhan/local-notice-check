@@ -33,15 +33,36 @@ RISK_LABELS = {
     "none",
 }
 SIGNAL_PATTERNS = {
-    "otp": r"\b(?:otp|one[- ]time (?:pin|password)|verification code)\b",
-    "cnic": r"\bcnic\b",
-    "credentials": r"\b(?:pin|password|cvv|card details?|bank details?)\b",
-    "link": r"(?:https?://|www\.|bit\.ly|tinyurl\.|cutt\.ly|\.xyz\b|\.top\b)",
-    "urgency": r"\b(?:urgent|immediately|today|now|within \d+|last warning)\b",
-    "payment": r"\b(?:pay|payment|fee|fine|transfer|send money|rs\.?|pkr)\b",
-    "refund_or_prize": r"\b(?:refund|prize|winner|lottery|cashback|reward)\b",
-    "courier": r"\b(?:parcel|courier|delivery|pakistan post|leopards|tcs|customs)\b",
-    "challan": r"\b(?:challan|traffic fine|traffic violation|e-challan)\b",
+    "otp": r"\b(?:otp|one[- ]time (?:pin|password)|verification code)\b|او ٹی پی",
+    "cnic": r"\bcnic\b|شناختی کارڈ",
+    "credentials": (
+        r"\b(?:pin|password|cvv|card details?|bank details?)\b|"
+        r"پاس ورڈ|کارڈ کی تفصیلات"
+    ),
+    "link": (
+        r"(?:https?://|www\.|bit\.ly|tinyurl\.|cutt\.ly|\.xyz\b|\.top\b)|"
+        r"\b(?:link|url|domain)\b|لنک"
+    ),
+    "urgency": (
+        r"\b(?:urgent|immediately|today|now|within \d+|last warning)\b|"
+        r"فوری|فوراً|آج|آخری وارننگ"
+    ),
+    "payment": (
+        r"\b(?:pay|payment|fee|fine|transfer|send money|rs\.?|pkr)\b|"
+        r"ادائیگی|جرمانہ|رقم"
+    ),
+    "refund_or_prize": (
+        r"\b(?:refund|prize|winner|lottery|cashback|reward)\b|"
+        r"انعام|ریفنڈ|قرعہ اندازی"
+    ),
+    "courier": (
+        r"\b(?:parcel|courier|delivery|pakistan post|leopards|tcs|customs)\b|"
+        r"پارسل|کوریئر|ڈیلیوری|پاکستان پوسٹ"
+    ),
+    "challan": (
+        r"\b(?:challan|traffic fine|traffic violation|e-challan)\b|"
+        r"چالان|ٹریفک جرمانہ"
+    ),
     "account_threat": (
         r"\b(?:account|sim|service|electricity)\b.{0,50}"
         r"\b(?:block|blocked|suspend|closed|disconnect)\b"
@@ -111,24 +132,50 @@ def detect_category(text: str, signals: dict[str, bool], example_id: str = "") -
     profile = EXAMPLE_PROFILES.get(example_id)
     if profile:
         return profile[1]
+    if signals["challan"]:
+        return "traffic_challan"
     lowered = (text or "").lower()
     categories = (
-        ("fbr", ("fbr", "taxpayer", "tax refund")),
-        ("bank", ("bank", "hbl", "ubl", "meezan", "alfalah")),
-        ("wallet", ("easypaisa", "jazzcash", "wallet")),
-        ("utility", ("electricity", "gas bill", "utility", "lesco", "k-electric")),
-        ("traffic_challan", ("challan", "traffic fine", "traffic violation")),
-        ("courier", ("parcel", "courier", "delivery", "pakistan post", "leopards", "tcs")),
-        ("customs", ("customs", "duty")),
-        ("university", ("university", "admission", "scholarship", "hec")),
-        ("job", ("job", "salary", "recruiter", "employment")),
-        ("marketplace", ("buyer", "seller", "marketplace", "whatsapp")),
+        ("fbr", ("fbr", "taxpayer", "tax refund", "ایف بی آر", "ٹیکس")),
+        ("bank", ("bank", "hbl", "ubl", "meezan", "alfalah", "بینک")),
+        ("wallet", ("easypaisa", "jazzcash", "wallet", "ایزی پیسہ", "جاز کیش")),
+        (
+            "utility",
+            ("electricity", "gas bill", "utility", "lesco", "k-electric", "بجلی", "گیس بل"),
+        ),
+        (
+            "traffic_challan",
+            ("challan", "traffic fine", "traffic violation", "چالان", "ٹریفک جرمانہ"),
+        ),
+        (
+            "courier",
+            (
+                "parcel",
+                "courier",
+                "delivery",
+                "pakistan post",
+                "leopards",
+                "tcs",
+                "پارسل",
+                "کوریئر",
+                "ڈیلیوری",
+                "پاکستان پوسٹ",
+            ),
+        ),
+        ("customs", ("customs", "duty", "کسٹمز")),
+        (
+            "university",
+            ("university", "admission", "scholarship", "hec", "یونیورسٹی", "داخلہ"),
+        ),
+        ("job", ("job", "salary", "recruiter", "employment", "نوکری", "تنخواہ")),
+        (
+            "marketplace",
+            ("buyer", "seller", "marketplace", "whatsapp", "خریدار", "فروخت", "واٹس ایپ"),
+        ),
     )
     for category, terms in categories:
         if any(term in lowered for term in terms):
             return category
-    if signals["challan"]:
-        return "traffic_challan"
     if signals["courier"]:
         return "courier"
     return "unknown"
@@ -210,7 +257,23 @@ def result_summary(
     return f"{risk_label}: {pattern}. {novelty} {RESULT_GUIDANCE[risk_label]}"
 
 
-def build_input_profile(text: str, image_data_url: str, example_id: str = "") -> dict[str, Any]:
+def assessment_evidence(assessment: dict[str, Any] | None) -> str:
+    """Return transient model evidence used only for allow-list classification."""
+    if not isinstance(assessment, dict):
+        return ""
+    values: list[str] = [str(assessment.get("simple_explanation", ""))]
+    red_flags = assessment.get("red_flags", [])
+    if isinstance(red_flags, list):
+        values.extend(str(item) for item in red_flags)
+    return " ".join(values)[:4000]
+
+
+def build_input_profile(
+    text: str,
+    image_data_url: str,
+    example_id: str = "",
+    assessment: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     profile = EXAMPLE_PROFILES.get(example_id)
     if profile:
         input_type = profile[0]
@@ -218,8 +281,13 @@ def build_input_profile(text: str, image_data_url: str, example_id: str = "") ->
         input_type = "image"
     else:
         input_type = "text"
-    signals = detect_signals(text, example_id)
-    category = detect_category(text, signals, example_id)
+    classification_text = text
+    if input_type == "image" and not example_id:
+        classification_text = " ".join(
+            part for part in (text, assessment_evidence(assessment)) if part
+        )
+    signals = detect_signals(classification_text, example_id)
+    category = detect_category(classification_text, signals, example_id)
     tactics = [name for name, enabled in signals.items() if enabled]
     return {
         "input": (
@@ -244,8 +312,18 @@ def build_trace_record(
     risk_label = str((assessment or {}).get("risk_label", "none"))
     if risk_label not in RISK_LABELS:
         risk_label = "none"
-    input_profile = build_input_profile(text, image_data_url, example_id)
-    signals = detect_signals(text, example_id)
+    input_profile = build_input_profile(
+        text,
+        image_data_url,
+        example_id,
+        assessment,
+    )
+    classification_text = text
+    if image_data_url and not example_id:
+        classification_text = " ".join(
+            part for part in (text, assessment_evidence(assessment)) if part
+        )
+    signals = detect_signals(classification_text, example_id)
     category = input_profile["input_category"]
     assessment = assessment or {}
     return {
