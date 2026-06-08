@@ -84,6 +84,11 @@ const translations = {
     requestFailedError: "The request could not be completed.",
     noResultError: "The app returned no result.",
     analyzeError: "Unable to analyze this input.",
+    modelCredentialsError: "Modal credentials are required.",
+    modelAuthError: "The model rejected the configured credentials.",
+    modelServiceError: "The model service returned an error. Please try again.",
+    modelUnavailableError: "The model is unavailable or still starting. Please try again.",
+    modelInvalidError: "The model returned an incomplete response. Please try again.",
     imageTypeError: "Use a PNG, JPG, or WebP image.",
     imageSizeError: "Please choose an image smaller than 8 MB.",
     exampleImageError: "Could not load the example image.",
@@ -159,6 +164,11 @@ const translations = {
     requestFailedError: "درخواست مکمل نہیں ہو سکی۔",
     noResultError: "کوئی نتیجہ موصول نہیں ہوا۔",
     analyzeError: "اس مواد کی جانچ نہیں ہو سکی۔",
+    modelCredentialsError: "ماڈل تک رسائی کے لیے لاگ اِن معلومات درکار ہیں۔",
+    modelAuthError: "ماڈل نے موجودہ لاگ اِن معلومات قبول نہیں کیں۔",
+    modelServiceError: "ماڈل سروس میں خرابی آئی ہے۔ براہ کرم دوبارہ کوشش کریں۔",
+    modelUnavailableError: "ماڈل دستیاب نہیں یا ابھی شروع ہو رہا ہے۔ براہ کرم دوبارہ کوشش کریں۔",
+    modelInvalidError: "ماڈل کا جواب مکمل نہیں تھا۔ براہ کرم دوبارہ کوشش کریں۔",
     imageTypeError: "PNG، JPG یا WebP تصویر استعمال کریں۔",
     imageSizeError: "براہ کرم 8 MB سے چھوٹی تصویر منتخب کریں۔",
     exampleImageError: "مثالی تصویر لوڈ نہیں ہو سکی۔",
@@ -317,7 +327,12 @@ function renderList(selector, items) {
 }
 
 function renderResult(payload) {
-  if (!payload.ok) throw new Error(t("analyzeError"));
+  if (!payload.ok) {
+    const localizedError = payload.error_code
+      ? translations[currentLanguage][payload.error_code]
+      : "";
+    throw new Error(localizedError || payload.error || t("analyzeError"));
+  }
   const result = payload.assessment;
   setStatus(payload.status);
   elements.risk.className = `risk-badge risk-${result.risk_label.toLowerCase().replaceAll(" ", "-")}`;

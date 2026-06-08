@@ -298,6 +298,7 @@ class TraceTests(unittest.TestCase):
             result = app.analyze_notice("test message")
         self.assertFalse(result["ok"])
         model_mock.assert_not_called()
+        self.assertEqual(result["error_code"], "modelCredentialsError")
         self.assertNotIn("modal_called", queue_mock.call_args.kwargs)
 
     def test_success_uses_existing_model_call_once(self) -> None:
@@ -334,6 +335,27 @@ class TraceTests(unittest.TestCase):
         self.assertNotIn("modal_called", queue_mock.call_args.kwargs)
         self.assertNotIn("retry_count", queue_mock.call_args.kwargs)
 
+    def test_trace_failure_does_not_hide_successful_assessment(self) -> None:
+        assessment = {
+            "risk_label": "Verify first",
+            "simple_explanation": "Check independently.",
+            "red_flags": ["Unverified sender"],
+            "safe_next_steps": ["Use an official channel."],
+            "reply_draft": "Please confirm through an official channel.",
+        }
+        with patch(
+            "app.model_status",
+            return_value={"connected": True, "label": "ready"},
+        ), patch("app.call_model", return_value=assessment), patch(
+            "app.queue_trace",
+            side_effect=RuntimeError("trace publisher failed"),
+        ):
+            result = app.analyze_notice("test message", save_trace=True)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["assessment"], assessment)
+        self.assertEqual(result["trace"]["status"], "failed")
+
     def test_timeout_is_sanitized(self) -> None:
         timeout = APITimeoutError(request=httpx.Request("POST", "https://example.invalid"))
         with patch(
@@ -345,6 +367,7 @@ class TraceTests(unittest.TestCase):
         ) as queue_mock:
             result = app.analyze_notice("test message")
         self.assertFalse(result["ok"])
+        self.assertEqual(result["error_code"], "modelUnavailableError")
         self.assertNotIn("failure_category", queue_mock.call_args.kwargs)
 
     def test_http_failure_is_sanitized(self) -> None:
@@ -363,6 +386,7 @@ class TraceTests(unittest.TestCase):
         ) as queue_mock:
             result = app.analyze_notice("test message")
         self.assertFalse(result["ok"])
+        self.assertEqual(result["error_code"], "modelServiceError")
         self.assertNotIn("private", json.dumps(queue_mock.call_args.kwargs))
 
     def test_malformed_output_is_sanitized(self) -> None:
@@ -375,6 +399,7 @@ class TraceTests(unittest.TestCase):
         ) as queue_mock:
             result = app.analyze_notice("test message")
         self.assertFalse(result["ok"])
+        self.assertEqual(result["error_code"], "modelInvalidError")
         self.assertNotIn("PRIVATE RAW OUTPUT", json.dumps(queue_mock.call_args.kwargs))
 
     def test_normalization_failure_uses_normalize_stage(self) -> None:
@@ -425,6 +450,50 @@ class TraceTests(unittest.TestCase):
         self.assertEqual(result["risk_label"], "Verify first")
         self.assertEqual(completions.calls, 2)
         self.assertEqual(telemetry["retry_count"], 1)
+
+    def test_invalid_model_json_is_retried_with_larger_urdu_budget(self) -> None:
+        valid = {
+            "risk_label": "Verify first",
+            "simple_explanation": "آزاد ذریعے سے تصدیق کریں۔",
+            "red_flags": ["بھیجنے والے کی تصدیق نہیں ہوئی۔"],
+            "safe_next_steps": ["سرکاری ذریعے سے رابطہ کریں۔"],
+            "reply_draft": "براہ کرم سرکاری ذریعے سے تصدیق کریں۔",
+        }
+
+        class Completions:
+            def __init__(self):
+                self.calls = 0
+                self.max_tokens: list[int] = []
+
+            def create(self, **kwargs):
+                self.calls += 1
+                self.max_tokens.append(kwargs["max_tokens"])
+                content = "{" if self.calls == 1 else json.dumps(valid)
+                message = type("Message", (), {"content": content})()
+                choice = type("Choice", (), {"message": message})()
+                return type("Completion", (), {"choices": [choice]})()
+
+        completions = Completions()
+        client = type(
+            "Client",
+            (),
+            {"chat": type("Chat", (), {"completions": completions})()},
+        )()
+        telemetry: dict = {}
+        with patch("app.create_model_client", return_value=(client, "model")), patch.dict(
+            "os.environ",
+            {"MODEL_MAX_ATTEMPTS": "2", "MODEL_RETRY_DELAY_SECONDS": "0"},
+        ):
+            result = app.call_model(
+                "test",
+                "",
+                telemetry,
+                output_language="ur",
+            )
+
+        self.assertEqual(result["risk_label"], "Verify first")
+        self.assertEqual(completions.calls, 2)
+        self.assertEqual(completions.max_tokens, [550, 550])
 
     def test_publisher_persists_batch(self) -> None:
         publisher = trace_runtime.TracePublisher()

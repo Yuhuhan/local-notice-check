@@ -328,12 +328,15 @@ html[lang="ur"] .drop-zone small {
 html[lang="ur"] textarea {
   min-height: 250px;
   padding: 19px 20px 26px;
-  direction: rtl;
-  text-align: right;
+  text-align: start;
   font-size: 17px;
   line-height: 2.1;
 }
 html[lang="ur"] textarea::placeholder { line-height: 2.1; }
+html[lang="ur"] #charCount {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
 html[lang="ur"] .field-meta {
   align-items: baseline;
   margin-top: 4px;

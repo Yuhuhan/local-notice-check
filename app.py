@@ -356,7 +356,15 @@ def call_model(
                     {"role": "user", "content": content},
                 ],
                 temperature=0,
-                max_tokens=500 if image_data_url else 350,
+                max_tokens=(
+                    700
+                    if output_language == "ur" and image_data_url
+                    else 550
+                    if output_language == "ur"
+                    else 500
+                    if image_data_url
+                    else 350
+                ),
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
@@ -391,6 +399,10 @@ def call_model(
             if attempt == retries:
                 raise
             time.sleep(retry_delay)
+        except ValueError:
+            if attempt == retries:
+                raise
+            time.sleep(retry_delay)
 
     raise RuntimeError("Model request ended without a response.")
 
@@ -415,13 +427,16 @@ def analyze_notice(
     ) -> dict[str, Any]:
         telemetry = telemetry or {}
         if save_trace:
-            trace_id, queued = queue_trace(
-                text=text,
-                image_data_url=image_data_url,
-                example_id=example_id,
-                assessment=response.get("assessment"),
-            )
-            response["trace"] = {"trace_id": trace_id, "status": queued}
+            try:
+                trace_id, queued = queue_trace(
+                    text=text,
+                    image_data_url=image_data_url,
+                    example_id=example_id,
+                    assessment=response.get("assessment"),
+                )
+                response["trace"] = {"trace_id": trace_id, "status": queued}
+            except Exception:
+                response["trace"] = {"trace_id": "", "status": "failed"}
         else:
             response["trace"] = {"trace_id": "", "status": "disabled"}
         return response
@@ -456,6 +471,7 @@ def analyze_notice(
                     "MODAL_PROXY_SECRET. Add them as environment variables or "
                     "Hugging Face Space secrets."
                 ),
+                "error_code": "modelCredentialsError",
                 "status": status,
             },
         )
@@ -481,16 +497,25 @@ def analyze_notice(
             if exc.status_code in {401, 403}
             else f"The Modal model returned HTTP {exc.status_code}. Try again shortly."
         )
+        error_code = (
+            "modelAuthError"
+            if exc.status_code in {401, 403}
+            else "modelServiceError"
+        )
     except APITimeoutError:
         message = "The Modal model is unavailable or still starting. Try again shortly."
+        error_code = "modelUnavailableError"
     except APIConnectionError:
         message = "The Modal model is unavailable or still starting. Try again shortly."
+        error_code = "modelUnavailableError"
     except (ValueError, RuntimeError):
         message = "The model returned an invalid response. Please try again."
+        error_code = "modelInvalidError"
     return finish(
         {
             "ok": False,
             "error": message,
+            "error_code": error_code,
             "status": {**status, "connected": False, "label": "Modal model unavailable"},
         },
         telemetry=telemetry,
