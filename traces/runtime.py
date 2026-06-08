@@ -377,23 +377,6 @@ def assessment_evidence(assessment: dict[str, Any] | None) -> str:
     return " ".join(values)[:4000]
 
 
-def structured_assessment_profile(
-    assessment: dict[str, Any] | None,
-) -> tuple[str, dict[str, bool]] | None:
-    if not isinstance(assessment, dict):
-        return None
-    category = assessment.get("trace_category")
-    tactics = assessment.get("trace_tactics")
-    if category not in CATEGORY_DISPLAY_NAMES or not isinstance(tactics, list):
-        return None
-    if any(tactic not in SIGNAL_PATTERNS for tactic in tactics):
-        return None
-    return category, {
-        name: name in tactics
-        for name in SIGNAL_PATTERNS
-    }
-
-
 def build_input_profile(
     text: str,
     image_data_url: str,
@@ -407,11 +390,6 @@ def build_input_profile(
         input_type = "image"
     else:
         input_type = "text"
-    structured_profile = (
-        structured_assessment_profile(assessment)
-        if input_type == "image" and not example_id
-        else None
-    )
     classification_text = text
     if input_type == "image" and not example_id:
         classification_text = " ".join(
@@ -419,19 +397,6 @@ def build_input_profile(
         )
     signals = detect_signals(classification_text, example_id)
     category = detect_category(classification_text, signals, example_id)
-    if structured_profile:
-        structured_category, structured_signals = structured_profile
-        confirmed_tactics = {
-            name
-            for name, enabled in structured_signals.items()
-            if enabled and signals[name]
-        }
-        if (
-            category == "unknown"
-            and structured_category != "unknown"
-            and confirmed_tactics
-        ):
-            category = structured_category
     tactics = [name for name, enabled in signals.items() if enabled]
     if input_type == "image" and not assessment and not example_id:
         input_description = "image: Assessment unavailable"

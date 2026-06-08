@@ -31,11 +31,10 @@ The application uses a Modal-hosted Qwen model for normal assessments. Creating
 a trace never makes an additional AI model call. Traces only observe the
 existing request path and convert it into allow-listed categories, booleans,
 and fixed descriptions. For image submissions, the existing assessment's
-explanation and red flags may be inspected transiently for this mapping, but
-their text is not stored. New model responses also include enum-only category
-and tactic hints. These hints are treated as untrusted: the trace mapper keeps
-only values supported by the explanation or red flags and falls back to its
-deterministic English/Urdu evidence rules when they disagree.
+explanation and red flags are inspected transiently for this mapping, but their
+text is not stored. The trace mapper predicts the privacy-safe image category
+and tactics directly from that result summary using deterministic English/Urdu
+evidence rules.
 
 ## Fields
 

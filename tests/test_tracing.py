@@ -195,7 +195,7 @@ class TraceTests(unittest.TestCase):
         self.assertNotIn(assessment["red_flags"][0], serialized)
         self.assertNotIn("PRIVATE_IMAGE_BYTES", serialized)
 
-    def test_image_trace_rejects_unsupported_structured_model_metadata(self) -> None:
+    def test_image_trace_uses_result_summary_not_extra_metadata(self) -> None:
         record = trace_runtime.build_trace_record(
             text="",
             image_data_url="data:image/png;base64,PRIVATE_IMAGE_BYTES",
