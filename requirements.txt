@@ -1,5 +1,6 @@
 accelerate>=1.8
 albumentations
+einops
 gradio==6.17.3
 huggingface_hub
 numpy
