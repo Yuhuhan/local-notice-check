@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import time
 from typing import Any
@@ -11,6 +12,8 @@ from app import model_endpoint
 from app.config import EXAMPLE_CACHE_PATH
 from app.schema import normalize_assessment
 from app.trace import queue_trace
+
+logger = logging.getLogger("noticecheck.service")
 
 
 def load_example_cache() -> dict[str, dict[str, Any]]:
@@ -177,6 +180,7 @@ def analyze_notice(
             }
         )
     except model_endpoint.ModelRuntimeError as exc:
+        logger.error("ModelRuntimeError: %s", exc)
         if image_data_url and "Urdu-script screenshots" in str(exc):
             message = str(exc)
             error_code = "ocrLanguageError"
@@ -189,7 +193,8 @@ def analyze_notice(
         else:
             message = "The local model is unavailable or could not be loaded."
             error_code = "modelUnavailableError"
-    except (RuntimeError, ValueError):
+    except (RuntimeError, ValueError) as exc:
+        logger.error("Model returned invalid response: %s: %s", type(exc).__name__, exc)
         message = "The local model returned an invalid response. Please try again."
         error_code = "modelInvalidError"
 

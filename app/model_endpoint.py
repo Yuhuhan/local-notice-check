@@ -5,6 +5,7 @@ from __future__ import annotations
 import gc
 import importlib.util
 import json
+import logging
 import os
 import re
 import threading
@@ -19,6 +20,8 @@ from app.config import ModelConfig, model_config
 from app.ocr import OCRRuntimeError, extract_text, ocr_installed
 from app.prompts import SYSTEM_PROMPT
 from app.schema import OUTPUT_SCHEMA, normalize_assessment
+
+logger = logging.getLogger("noticecheck.model")
 
 _MODEL: Any | None = None
 _MODEL_KEY: ModelConfig | None = None
@@ -143,9 +146,14 @@ def _parse_model_json(content: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         match = re.search(r"\{.*\}", candidate, re.S)
         if not match:
+            logger.error("Model did not return JSON. Raw output (first 500 chars): %s", content[:500])
             raise ValueError("Model did not return JSON.") from None
         value = json.loads(match.group(0))
-    return normalize_assessment(value)
+    try:
+        return normalize_assessment(value)
+    except ValueError as exc:
+        logger.error("Assessment normalization failed: %s | Parsed value: %s", exc, value)
+        raise
 
 
 def _messages(text: str, output_language: str) -> list[dict[str, str]]:
@@ -260,11 +268,13 @@ def _run_transformers_completion(
         )
 
     content = generate(messages)
+    logger.info("Model raw output (first 500 chars): %s", content[:500] if content else "<empty>")
     if not content:
         raise ValueError("Model returned an empty response.")
     try:
         return _parse_model_json(content)
     except ValueError:
+        logger.warning("First parse failed, attempting repair. Raw output (first 500 chars): %s", content[:500])
         repair_messages = [
             *messages,
             {"role": "assistant", "content": content},
@@ -277,6 +287,7 @@ def _run_transformers_completion(
             },
         ]
         repaired = generate(repair_messages)
+        logger.info("Repair output (first 500 chars): %s", repaired[:500] if repaired else "<empty>")
         if not repaired:
             raise ValueError("Model returned an empty repair response.")
         return _parse_model_json(repaired)
@@ -310,10 +321,12 @@ def call_model(
         raise ModelRuntimeError("No readable notice text was supplied.")
     attempts = config.max_attempts
     last_error: Exception | None = None
+    logger.info("call_model starting: %d attempt(s), input length=%d", attempts, len(input_text))
     for attempt in range(attempts):
         ephemeral_model: Any | None = None
         try:
             if os.getenv("SPACE_ID"):
+                logger.info("Using Transformers path (attempt %d/%d)", attempt + 1, attempts)
                 return _run_transformers_completion(input_text, output_language)
             model = (
                 _get_persistent_model(config)
@@ -327,6 +340,7 @@ def call_model(
             raise
         except (RuntimeError, ValueError) as exc:
             last_error = exc
+            logger.warning("Attempt %d/%d failed: %s: %s", attempt + 1, attempts, type(exc).__name__, exc)
             if attempt + 1 < attempts:
                 time.sleep(config.retry_delay_seconds)
         finally:
