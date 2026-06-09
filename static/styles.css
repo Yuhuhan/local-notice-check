@@ -146,7 +146,7 @@ h1 > span:last-child { color: #fda4af; }
   margin-left: auto; margin-right: auto;
 }
 .workspace {
-  position: relative; margin-top: -70px; padding: clamp(24px, 4vw, 46px);
+  position: relative; margin-top: 32px; padding: clamp(24px, 4vw, 46px);
   border: 1px solid var(--line); border-radius: 28px; background: var(--surface); box-shadow: var(--shadow);
 }
 .section-heading { display: flex; justify-content: space-between; gap: 24px; align-items: end; margin-bottom: 30px; }

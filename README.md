@@ -1,6 +1,9 @@
 ---
 title: NoticeCheck
 emoji: 🔎
+author: Kingabzpro
+collaborators:
+- Codex
 colorFrom: indigo
 colorTo: red
 sdk: gradio
@@ -18,8 +21,7 @@ tags:
 - scam-detection
 - online-safety
 - pakistan
-- urdu
-- bilingual
+- english
 short_description: Review suspicious Pakistani messages before you act.
 ---
 
@@ -58,7 +60,7 @@ Structured risk assessment
 - **GGUF:** `MiniCPM5-1B-Q8_0.gguf`
 - **OCR:** `nvidia/nemotron-ocr-v2`
 - **Hosting:** Hugging Face Spaces ZeroGPU or local NVIDIA hardware
-- **Interface:** custom English/Urdu HTML, CSS, and JavaScript
+- **Interface:** custom English HTML, CSS, and JavaScript
 
 The application does not use a remote model API and has no heuristic assessment
 fallback. Model and OCR failures are returned explicitly.

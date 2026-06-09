@@ -45,7 +45,7 @@ const translations = {
     imageMode: "Screenshot mode active — text input is locked",
     pasteLabel: "Or paste the message",
     textPlaceholder: "Paste the SMS, email, bill text, or notice here...",
-    languageSupport: "English is supported; Urdu and Roman Urdu are best effort",
+    languageSupport: "English interface",
     textMode: "Text mode active — image upload is locked",
     traceTitle: "Publish privacy-safe trace",
     traceText: "Stores automated redacted text or an image description. Raw text, screenshots, links, identifiers, and model text are not stored.",
@@ -186,7 +186,8 @@ const translations = {
 let imageDataUrl = "";
 let activeMode = null;
 let activeExampleId = "";
-let currentLanguage = localStorage.getItem("noticecheck-language") === "ur" ? "ur" : "en";
+let currentLanguage = "en";
+localStorage.removeItem("noticecheck-language");
 let currentStatus = null;
 let currentRiskLabel = "";
 
@@ -195,8 +196,7 @@ function t(key) {
 }
 
 function applyLanguage(language) {
-  currentLanguage = language === "ur" ? "ur" : "en";
-  localStorage.setItem("noticecheck-language", currentLanguage);
+  currentLanguage = "en";
   document.documentElement.lang = currentLanguage;
   document.documentElement.dir = currentLanguage === "ur" ? "rtl" : "ltr";
   document.title = t("pageTitle");
