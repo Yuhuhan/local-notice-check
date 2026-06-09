@@ -443,7 +443,7 @@ class TraceTests(unittest.TestCase):
         result = model_endpoint._run_completion(local_model, "test", "ur")
         self.assertEqual(result["risk_label"], "Verify first")
         self.assertEqual(local_model.calls, 1)
-        self.assertEqual(local_model.max_tokens, [550])
+        self.assertEqual(local_model.max_tokens, [1200])
         self.assertEqual(local_model.response_formats[0]["type"], "json_object")
 
     def test_ocr_extracts_paragraph_text(self) -> None:

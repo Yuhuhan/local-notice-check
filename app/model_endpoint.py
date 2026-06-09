@@ -36,9 +36,9 @@ def model_status() -> dict[str, Any]:
     return {
         "connected": ready,
         "label": (
-            f"MiniCPM5 llama.cpp ready: {config.filename}"
+            "Local models ready: MiniCPM5-1B Q8 + Nemotron OCR v2"
             if ready
-            else "llama-cpp-python is not installed or configured"
+            else "Local model setup required"
         ),
         "mode": "minicpm5_llama_cpp",
         "model": config.source,
@@ -154,7 +154,7 @@ def _run_completion(
         ],
         "temperature": 0.2,
         "top_p": 0.9,
-        "max_tokens": 900 if config.enable_thinking else 550,
+        "max_tokens": 1200,
         "response_format": {
             "type": "json_object",
             "schema": OUTPUT_SCHEMA,

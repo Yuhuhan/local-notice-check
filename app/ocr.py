@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import base64
+import ctypes
 import gc
 import importlib.util
 import io
 import re
+import sys
 import threading
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -46,11 +49,18 @@ def _get_pipeline(language: str = "multi") -> Any:
     with _PIPELINE_LOCK:
         if language not in _PIPELINES:
             try:
+                import torch
+
+                for root in map(Path, sys.path):
+                    for library in root.glob("nvidia/cuda_runtime/lib/libcudart.so*"):
+                        ctypes.CDLL(str(library), mode=ctypes.RTLD_GLOBAL)
+                        break
+                if torch.cuda.is_available():
+                    torch.cuda.init()
                 from nemotron_ocr.inference.pipeline_v2 import NemotronOCRV2
             except ImportError as exc:
                 raise OCRRuntimeError(
-                    "Nemotron OCR v2 is not installed. Use Python 3.12 and "
-                    "install the Space requirements."
+                    "Nemotron OCR v2 or its CUDA runtime is unavailable."
                 ) from exc
             _PIPELINES[language] = NemotronOCRV2(lang=language)
         return _PIPELINES[language]

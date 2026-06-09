@@ -118,7 +118,7 @@ schema validation and a reproducible summary of these quality indicators.
 
 ## Links
 
-- App: https://huggingface.co/spaces/build-small-hackathon/pakistan-notice-helper-local
+- App: https://huggingface.co/spaces/build-small-hackathon/noticecheck
 
 ## License
 

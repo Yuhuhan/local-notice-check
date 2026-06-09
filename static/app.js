@@ -25,7 +25,7 @@ const translations = {
     pageTitle: "NoticeCheck",
     pageDescription: "Review suspicious Pakistani messages before you click, pay, or reply.",
     statusChecking: "Checking model",
-    statusReady: "Local model ready",
+    statusReady: "Local models ready",
     statusCredentials: "Local model setup required",
     statusUnavailable: "Local model unavailable",
     heroEyebrow: "Pause. Inspect. Decide.",
@@ -274,9 +274,8 @@ function setStatus(status) {
     return;
   }
   currentStatus = status;
-  const modelName = status.label?.match(/:\s*(.+)$/)?.[1] || "";
   elements.statusText.textContent = status.connected
-    ? `${t("statusReady")}${currentLanguage === "en" && modelName ? `: ${modelName}` : ""}`
+    ? status.label || t("statusReady")
     : status.label?.toLowerCase().includes("credentials")
       ? t("statusCredentials")
       : t("statusUnavailable");
