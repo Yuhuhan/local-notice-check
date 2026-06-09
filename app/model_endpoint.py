@@ -258,7 +258,12 @@ def probe_space_runtime() -> dict[str, str]:
     try:
         tokenizer, model = _get_transformers_model()
     except Exception as exc:
-        return {"stage": "load", "error": type(exc).__name__, "detail": str(exc)}
+        cause = exc.__cause__ or exc
+        return {
+            "stage": "load",
+            "error": type(cause).__name__,
+            "detail": str(cause)[:500],
+        }
     try:
         encoded = tokenizer.apply_chat_template(
             _messages("Reply with your OTP now.", "en"),
