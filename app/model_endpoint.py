@@ -27,6 +27,7 @@ _TF_MODEL: Any | None = None
 _TF_TOKENIZER: Any | None = None
 _TF_LOCK = threading.RLock()
 SPACE_MODEL_REPO = os.getenv("SPACE_MODEL_REPO", "openbmb/MiniCPM5-1B").strip()
+URDU_SCRIPT_PATTERN = re.compile(r"[\u0600-\u06ff]")
 
 
 class ModelRuntimeError(RuntimeError):
@@ -52,6 +53,7 @@ def model_status() -> dict[str, Any]:
         ),
         "mode": "minicpm5_transformers" if on_space else "minicpm5_llama_cpp",
         "model": SPACE_MODEL_REPO if on_space else config.source,
+        "compute": "zerogpu_cuda" if on_space else "local",
         "reasoning": config.enable_thinking,
         "ocr": {
             "model": "nvidia/nemotron-ocr-v2",
@@ -232,30 +234,52 @@ def _run_transformers_completion(
     import torch
 
     tokenizer, model = _get_transformers_model()
-    encoded = tokenizer.apply_chat_template(
-        _messages(text, output_language),
-        tokenize=True,
-        add_generation_prompt=True,
-        enable_thinking=model_config().enable_thinking,
-        return_tensors="pt",
-        return_dict=True,
-    )
-    encoded = encoded.to(model.device)
-    prompt_length = encoded["input_ids"].shape[1]
-    with torch.no_grad():
-        generated = model.generate(
-            **encoded,
-            max_new_tokens=800,
-            do_sample=False,
-            pad_token_id=tokenizer.eos_token_id,
+    messages = _messages(text, output_language)
+
+    def generate(active_messages: list[dict[str, str]]) -> str:
+        encoded = tokenizer.apply_chat_template(
+            active_messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            enable_thinking=model_config().enable_thinking,
+            return_tensors="pt",
+            return_dict=True,
         )
-    content = tokenizer.decode(
-        generated[0][prompt_length:],
-        skip_special_tokens=True,
-    )
+        encoded = encoded.to(model.device)
+        prompt_length = encoded["input_ids"].shape[1]
+        with torch.no_grad():
+            generated = model.generate(
+                **encoded,
+                max_new_tokens=800,
+                do_sample=False,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+        return tokenizer.decode(
+            generated[0][prompt_length:],
+            skip_special_tokens=True,
+        )
+
+    content = generate(messages)
     if not content:
         raise ValueError("Model returned an empty response.")
-    return _parse_model_json(content)
+    try:
+        return _parse_model_json(content)
+    except ValueError:
+        repair_messages = [
+            *messages,
+            {"role": "assistant", "content": content},
+            {
+                "role": "user",
+                "content": (
+                    "Repair the previous response. Return only one valid JSON "
+                    "object with the five requested keys and no other text."
+                ),
+            },
+        ]
+        repaired = generate(repair_messages)
+        if not repaired:
+            raise ValueError("Model returned an empty repair response.")
+        return _parse_model_json(repaired)
 
 
 @spaces.GPU(duration=60)
@@ -272,6 +296,11 @@ def call_model(
             ocr_text = extract_text(image_data_url)
         except OCRRuntimeError as exc:
             raise ModelRuntimeError(str(exc)) from exc
+        if URDU_SCRIPT_PATTERN.search(ocr_text):
+            raise ModelRuntimeError(
+                "Urdu-script screenshots are not supported by Nemotron OCR v2. "
+                "Paste an English transcription instead."
+            )
         input_text = (
             f"{input_text}\n\nText extracted from screenshot:\n{ocr_text}"
             if input_text

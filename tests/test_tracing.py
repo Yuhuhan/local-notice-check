@@ -571,6 +571,65 @@ class TraceTests(unittest.TestCase):
         tokenizer.apply_chat_template.assert_called_once()
         model.generate.assert_called_once()
 
+    def test_transformers_completion_repairs_invalid_json_once(self) -> None:
+        assessment = {
+            "risk_label": "Suspicious",
+            "simple_explanation": "The sender is not verified.",
+            "red_flags": ["Unverified sender"],
+            "safe_next_steps": ["Confirm through an official channel."],
+            "reply_draft": "I will verify this independently.",
+        }
+
+        class Encoded(dict):
+            def to(self, device):
+                return self
+
+        class InputIds:
+            shape = (1, 8)
+
+        tokenizer = unittest.mock.Mock()
+        tokenizer.eos_token_id = 2
+        tokenizer.apply_chat_template.return_value = Encoded(
+            input_ids=InputIds()
+        )
+        tokenizer.decode.side_effect = [
+            "This response is not JSON.",
+            json.dumps(assessment),
+        ]
+        model = unittest.mock.Mock()
+        model.device = "cuda:0"
+        model.generate.return_value = [[0] * 9]
+
+        with patch(
+            "app.model_endpoint._get_transformers_model",
+            return_value=(tokenizer, model),
+        ):
+            result = model_endpoint._run_transformers_completion(
+                "Confirm this sender.",
+                "en",
+            )
+
+        self.assertEqual(result, assessment)
+        self.assertEqual(model.generate.call_count, 2)
+
+    def test_urdu_script_ocr_returns_language_error(self) -> None:
+        with patch(
+            "app.model_endpoint.extract_text",
+            return_value="آپ کا اکاؤنٹ بند ہو جائے گا",
+        ):
+            with self.assertRaisesRegex(
+                model_endpoint.ModelRuntimeError,
+                "Urdu-script screenshots",
+            ):
+                model_endpoint.call_model(
+                    "",
+                    (
+                        "data:image/png;base64,"
+                        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lE"
+                        "QVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+                    ),
+                )
+
     def test_publisher_persists_batch(self) -> None:
         publisher = trace_runtime.TracePublisher()
         with tempfile.TemporaryDirectory() as directory, patch.object(

@@ -177,7 +177,10 @@ def analyze_notice(
             }
         )
     except model_endpoint.ModelRuntimeError as exc:
-        if image_data_url and "Nemotron OCR" in str(exc):
+        if image_data_url and "Urdu-script screenshots" in str(exc):
+            message = str(exc)
+            error_code = "ocrLanguageError"
+        elif image_data_url and "Nemotron OCR" in str(exc):
             message = str(exc)
             error_code = "ocrUnavailableError"
         elif image_data_url and "No readable text" in str(exc):
