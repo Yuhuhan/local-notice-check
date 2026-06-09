@@ -194,9 +194,14 @@ def analyze_notice(
             message = "The local model is unavailable or could not be loaded."
             error_code = "modelUnavailableError"
     except (RuntimeError, ValueError) as exc:
+        exc_text = str(exc)
         logger.error("Model returned invalid response: %s: %s", type(exc).__name__, exc)
-        message = "The local model returned an invalid response. Please try again."
-        error_code = "modelInvalidError"
+        if "ZeroGPU quota" in exc_text or "exceeded your ZeroGPU" in exc_text:
+            message = "GPU quota exceeded. Please try again later or authenticate with a Hugging Face token for more quota."
+            error_code = "gpuQuotaError"
+        else:
+            message = "The local model returned an invalid response. Please try again."
+            error_code = "modelInvalidError"
 
     return finish(
         {

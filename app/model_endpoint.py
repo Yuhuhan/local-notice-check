@@ -293,7 +293,7 @@ def _run_transformers_completion(
         return _parse_model_json(repaired)
 
 
-@spaces.GPU(duration=60)
+@spaces.GPU(duration=45)
 def call_model(
     text: str,
     image_data_url: str = "",
