@@ -1,9 +1,10 @@
 # Local model setup
 
-The application uses two local models:
+The application has separate Space and local runtimes:
 
-- `openbmb/MiniCPM5-1B-GGUF` through `llama-cpp-python` for reasoning
-- `nvidia/nemotron-ocr-v2` through its native PyTorch package for screenshots
+- **Space:** `openbmb/MiniCPM5-1B` through Transformers, plus
+  `nvidia/nemotron-ocr-v2` for screenshots
+- **Local:** `openbmb/MiniCPM5-1B-GGUF` through `llama-cpp-python`
 
 No remote model API is required.
 
@@ -12,17 +13,15 @@ No remote model API is required.
 Nemotron OCR v2 requires Linux amd64, an NVIDIA GPU, CUDA build/runtime
 compatibility, and Python 3.12. The Space metadata pins Python 3.12.
 
-Install the configured dependencies:
+Install the Space dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
 The OCR dependency is NVIDIA's prebuilt `cp312` wheel from its official
-ZeroGPU Space. This follows the installation used by
-`nvidia/nemotron-ocr-v2`. PyTorch uses CUDA 12.8 wheels for OCR. MiniCPM uses
-the official `llama-cpp-python` CPU wheel because ZeroGPU's isolated worker
-cannot reliably resolve the CUDA wheel's `libcudart` dependency.
+ZeroGPU Space. PyTorch uses CUDA 12.8 wheels. MiniCPM uses Transformers on the
+same ZeroGPU allocation. The Space does not install `llama-cpp-python`.
 
 ## MiniCPM configuration
 
@@ -52,6 +51,7 @@ Set `MODEL_GPU_LAYERS=-1` when using a locally built CUDA-enabled
 `llama-cpp-python` installation outside ZeroGPU.
 
 ```powershell
+python -m pip install -r requirements-local.txt
 python app.py --download-model
 python app.py --test-endpoint
 python app.py
@@ -60,9 +60,9 @@ python app.py
 ## ZeroGPU lifecycle
 
 Inference runs inside `@spaces.GPU(duration=60)`. Nemotron OCR first extracts
-paragraph text from the screenshot, then MiniCPM5-1B assesses that text. The
-OCR pipeline is cached like NVIDIA's official Space. Local runs may also keep
-MiniCPM loaded; Space runs load and close the GGUF per allocated request.
+paragraph text from a screenshot, then the Transformers MiniCPM5-1B model
+assesses that text. Both Space models are cached in the ZeroGPU worker. Local
+runs use only the separate GGUF/llama.cpp path.
 
 ## Language limits
 

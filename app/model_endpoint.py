@@ -1,10 +1,11 @@
-"""In-process llama.cpp model endpoint for local and ZeroGPU inference."""
+"""MiniCPM inference via Transformers on Spaces or llama.cpp locally."""
 
 from __future__ import annotations
 
 import gc
 import importlib.util
 import json
+import os
 import re
 import threading
 import time
@@ -22,6 +23,10 @@ from app.schema import OUTPUT_SCHEMA, normalize_assessment
 _MODEL: Any | None = None
 _MODEL_KEY: ModelConfig | None = None
 _MODEL_LOCK = threading.RLock()
+_TF_MODEL: Any | None = None
+_TF_TOKENIZER: Any | None = None
+_TF_LOCK = threading.RLock()
+SPACE_MODEL_REPO = os.getenv("SPACE_MODEL_REPO", "openbmb/MiniCPM5-1B").strip()
 
 
 class ModelRuntimeError(RuntimeError):
@@ -30,18 +35,23 @@ class ModelRuntimeError(RuntimeError):
 
 def model_status() -> dict[str, Any]:
     config = model_config()
-    installed = importlib.util.find_spec("llama_cpp") is not None
-    configured = bool(config.model_path or (config.repo_id and config.filename))
+    on_space = bool(os.getenv("SPACE_ID"))
+    installed = importlib.util.find_spec(
+        "transformers" if on_space else "llama_cpp"
+    ) is not None
+    configured = bool(SPACE_MODEL_REPO) if on_space else bool(
+        config.model_path or (config.repo_id and config.filename)
+    )
     ready = installed and configured
     return {
         "connected": ready,
         "label": (
-            "Local models ready: MiniCPM5-1B Q8 + Nemotron OCR v2"
+            "Local models ready: MiniCPM5-1B + Nemotron OCR v2"
             if ready
             else "Local model setup required"
         ),
-        "mode": "minicpm5_llama_cpp",
-        "model": config.source,
+        "mode": "minicpm5_transformers" if on_space else "minicpm5_llama_cpp",
+        "model": SPACE_MODEL_REPO if on_space else config.source,
         "reasoning": config.enable_thinking,
         "ocr": {
             "model": "nvidia/nemotron-ocr-v2",
@@ -107,13 +117,17 @@ def _get_persistent_model(config: ModelConfig) -> Any:
 
 
 def close_model() -> None:
-    global _MODEL, _MODEL_KEY
+    global _MODEL, _MODEL_KEY, _TF_MODEL, _TF_TOKENIZER
     with _MODEL_LOCK:
         model, _MODEL, _MODEL_KEY = _MODEL, None, None
         if model is not None:
             close = getattr(model, "close", None)
             if callable(close):
                 close()
+        gc.collect()
+    with _TF_LOCK:
+        _TF_MODEL = None
+        _TF_TOKENIZER = None
         gc.collect()
 
 
@@ -132,11 +146,7 @@ def _parse_model_json(content: str) -> dict[str, Any]:
     return normalize_assessment(value)
 
 
-def _run_completion(
-    model: Any,
-    text: str,
-    output_language: str,
-) -> dict[str, Any]:
+def _messages(text: str, output_language: str) -> list[dict[str, str]]:
     language = (
         "Write all user-facing JSON values in clear Urdu script."
         if output_language == "ur"
@@ -144,14 +154,24 @@ def _run_completion(
     )
     prompt = (
         "Assess this Pakistani notice or message for scam risk. "
-        f"{language}\n\nMessage text:\n{text.strip()}"
+        f"{language}\nReturn only JSON matching this schema:\n"
+        f"{json.dumps(OUTPUT_SCHEMA, ensure_ascii=False)}"
+        f"\n\nMessage text:\n{text.strip()}"
     )
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": prompt},
+    ]
+
+
+def _run_completion(
+    model: Any,
+    text: str,
+    output_language: str,
+) -> dict[str, Any]:
     config = model_config()
     request: dict[str, Any] = {
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
+        "messages": _messages(text, output_language),
         "temperature": 0.2,
         "top_p": 0.9,
         "max_tokens": 1200,
@@ -172,13 +192,72 @@ def _run_completion(
     return _parse_model_json(str(content))
 
 
+def _get_transformers_model() -> tuple[Any, Any]:
+    global _TF_MODEL, _TF_TOKENIZER
+    with _TF_LOCK:
+        if _TF_MODEL is None or _TF_TOKENIZER is None:
+            try:
+                import torch
+                from transformers import AutoModelForCausalLM, AutoTokenizer
+            except ImportError as exc:
+                raise ModelRuntimeError(
+                    "Transformers MiniCPM runtime is not installed."
+                ) from exc
+            try:
+                _TF_TOKENIZER = AutoTokenizer.from_pretrained(SPACE_MODEL_REPO)
+                _TF_MODEL = AutoModelForCausalLM.from_pretrained(
+                    SPACE_MODEL_REPO,
+                    torch_dtype=torch.bfloat16,
+                ).to("cuda").eval()
+            except Exception as exc:
+                _TF_MODEL = None
+                _TF_TOKENIZER = None
+                raise ModelRuntimeError(
+                    "The Space MiniCPM model could not be loaded."
+                ) from exc
+        return _TF_TOKENIZER, _TF_MODEL
+
+
+def _run_transformers_completion(
+    text: str,
+    output_language: str,
+) -> dict[str, Any]:
+    import torch
+
+    tokenizer, model = _get_transformers_model()
+    encoded = tokenizer.apply_chat_template(
+        _messages(text, output_language),
+        tokenize=True,
+        add_generation_prompt=True,
+        enable_thinking=model_config().enable_thinking,
+        return_tensors="pt",
+        return_dict=True,
+    )
+    encoded = {name: tensor.to(model.device) for name, tensor in encoded.items()}
+    prompt_length = encoded["input_ids"].shape[1]
+    with torch.no_grad():
+        generated = model.generate(
+            **encoded,
+            max_new_tokens=800,
+            do_sample=False,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+    content = tokenizer.decode(
+        generated[0][prompt_length:],
+        skip_special_tokens=True,
+    )
+    if not content:
+        raise ValueError("Model returned an empty response.")
+    return _parse_model_json(content)
+
+
 @spaces.GPU(duration=60)
 def call_model(
     text: str,
     image_data_url: str = "",
     output_language: str = "en",
 ) -> dict[str, Any]:
-    """Run one local inference inside a ZeroGPU allocation when available."""
+    """Run Transformers on Spaces and llama.cpp for local installations."""
     config = model_config()
     input_text = text.strip()
     if image_data_url:
@@ -198,6 +277,8 @@ def call_model(
     for attempt in range(attempts):
         ephemeral_model: Any | None = None
         try:
+            if os.getenv("SPACE_ID"):
+                return _run_transformers_completion(input_text, output_language)
             model = (
                 _get_persistent_model(config)
                 if config.keep_loaded

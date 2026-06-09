@@ -14,6 +14,7 @@ pinned: true
 license: mit
 tags:
 - llama-cpp-python
+- transformers
 - minicpm5-1b
 - nemotron-ocr-v2
 - gguf
@@ -50,14 +51,14 @@ Custom Gradio Server frontend
         +--> Nemotron OCR v2 for screenshot text
         |
         v
-MiniCPM5-1B Q8_0 through llama-cpp-python
+MiniCPM5-1B through Transformers on ZeroGPU
         |
         v
 Structured risk assessment
 ```
 
-- **Reasoning:** `openbmb/MiniCPM5-1B-GGUF`
-- **GGUF:** `MiniCPM5-1B-Q8_0.gguf`
+- **Space reasoning:** `openbmb/MiniCPM5-1B` through Transformers
+- **Local reasoning:** `MiniCPM5-1B-Q8_0.gguf` through `llama-cpp-python`
 - **OCR:** `nvidia/nemotron-ocr-v2`
 - **Hosting:** Hugging Face Spaces ZeroGPU or local NVIDIA hardware
 - **Interface:** custom English HTML, CSS, and JavaScript
@@ -72,7 +73,7 @@ app.py                 Thin Space launcher
 app/
   cli.py               CLI and startup
   config.py            Environment configuration
-  model_endpoint.py    MiniCPM llama.cpp inference
+  model_endpoint.py    Space Transformers and local llama.cpp inference
   ocr.py               Nemotron OCR adapter
   server.py            Gradio/FastAPI routes
   service.py           Assessment orchestration
@@ -85,10 +86,17 @@ tests/                 Application and trace tests
 
 ## Run
 
-Nemotron OCR's official wheel requires Linux, Python 3.12, and NVIDIA CUDA.
+For the Hugging Face Space runtime:
 
 ```bash
 python -m pip install -r requirements.txt
+python app.py
+```
+
+For local GGUF inference through llama.cpp:
+
+```bash
+python -m pip install -r requirements-local.txt
 python app.py --download-model
 python app.py --self-test
 python app.py

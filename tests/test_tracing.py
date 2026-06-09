@@ -500,6 +500,33 @@ class TraceTests(unittest.TestCase):
             "Pay Rs. 85 immediately",
         )
 
+    def test_space_uses_transformers_instead_of_llama_cpp(self) -> None:
+        config = model_endpoint.model_config()
+        assessment = {
+            "risk_label": "Verify first",
+            "simple_explanation": "Confirm the sender independently.",
+            "red_flags": ["Unverified sender"],
+            "safe_next_steps": ["Use an official contact channel."],
+            "reply_draft": "I will verify this independently.",
+        }
+        with patch.dict("os.environ", {"SPACE_ID": "noticecheck"}), patch(
+            "app.model_endpoint.model_config",
+            return_value=config,
+        ), patch(
+            "app.model_endpoint._run_transformers_completion",
+            return_value=assessment,
+        ) as transformers_mock, patch(
+            "app.model_endpoint._build_model",
+        ) as llama_mock:
+            result = model_endpoint.call_model("Please pay this fee now.")
+
+        self.assertEqual(result, assessment)
+        transformers_mock.assert_called_once_with(
+            "Please pay this fee now.",
+            "en",
+        )
+        llama_mock.assert_not_called()
+
     def test_publisher_persists_batch(self) -> None:
         publisher = trace_runtime.TracePublisher()
         with tempfile.TemporaryDirectory() as directory, patch.object(

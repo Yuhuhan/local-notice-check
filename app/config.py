@@ -39,7 +39,7 @@ class ModelConfig:
 
 
 def model_config() -> ModelConfig:
-    """Return llama.cpp settings for local and Hugging Face Space runs."""
+    """Return llama.cpp settings for local GGUF inference."""
     on_space = bool(os.getenv("SPACE_ID"))
     return ModelConfig(
         repo_id=os.getenv(

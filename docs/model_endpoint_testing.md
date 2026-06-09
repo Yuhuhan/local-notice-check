@@ -1,14 +1,16 @@
 # Testing the local model
 
-The active inference path is:
+The Space inference path is:
 
 ```text
 Custom frontend
   -> queued Gradio backend
   -> Nemotron OCR v2 for screenshot text
   -> app/model_endpoint.py
-  -> MiniCPM5-1B GGUF through llama-cpp-python
+  -> MiniCPM5-1B through Transformers on ZeroGPU
 ```
+
+Local endpoint tests use MiniCPM5-1B GGUF through `llama-cpp-python`.
 
 ## Fast checks
 
@@ -22,6 +24,7 @@ python -m unittest
 Download the configured GGUF:
 
 ```powershell
+python -m pip install -r requirements-local.txt
 python app.py --download-model
 ```
 

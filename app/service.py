@@ -158,8 +158,8 @@ def analyze_notice(
             {
                 "ok": False,
                 "error": (
-                    "The local model runtime is not ready. Install "
-                    "llama-cpp-python and check the model configuration."
+                    "The model runtime is not ready. Install the configured "
+                    "backend and check the model configuration."
                 ),
                 "error_code": "modelConfigurationError",
                 "status": status,
