@@ -169,7 +169,10 @@ def _run_completion(
         raise ValueError("Model returned an invalid completion.") from exc
     if not content:
         raise ValueError("Model returned an empty response.")
-    return _parse_model_json(str(content))
+    try:
+        return _parse_model_json(str(content))
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Model output: {str(content)[:500]!r}") from exc
 
 
 @spaces.GPU(duration=60)
