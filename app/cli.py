@@ -15,7 +15,7 @@ from app.model_endpoint import (
     model_status,
     prepare_model_files,
 )
-from app.ocr import close_ocr
+from app.ocr import close_ocr, preload_ocr
 from app.schema import REQUIRED_FIELDS, normalize_assessment
 from app.server import app
 from app.service import analyze_notice, sanitize_model_guidance
@@ -103,6 +103,7 @@ def main() -> int:
             print(prepare_model_files())
             return 0
         start_trace_worker()
+        preload_ocr()
         app.launch(server_name=args.host, server_port=args.port)
         return 0
     except (ModelRuntimeError, RuntimeError, ValueError) as exc:

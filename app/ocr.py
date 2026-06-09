@@ -161,6 +161,14 @@ def extract_text(image_data_url: str) -> str:
         raise OCRRuntimeError("Nemotron-Parse could not read the screenshot.") from exc
 
 
+def preload_ocr() -> None:
+    """Download and load the OCR model at startup."""
+    logger.info("Preloading Nemotron-Parse-v1.2...")
+    _load_postprocessing()
+    _get_model()
+    logger.info("Nemotron-Parse-v1.2 preloaded successfully.")
+
+
 def close_ocr() -> None:
     """Release cached model for local shutdown or explicit cleanup."""
     global _MODEL, _PROCESSOR, _GEN_CONFIG, _POSTPROCESSING
