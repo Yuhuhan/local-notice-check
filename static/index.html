@@ -8,6 +8,23 @@
   <title>NoticeCheck</title>
   <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/styles.css">
+  <script>
+    // ZeroGPU auth handshake — required for PRO quota in HF iframe.
+    // Without this, gr.Server custom frontends are treated as unauthenticated.
+    const ZEROGPU_HEADERS_MSG = "supports-zerogpu-headers";
+    window.addEventListener("message", (event) => {
+      if (event.data === ZEROGPU_HEADERS_MSG) {
+        window.supports_zerogpu_headers = true;
+      }
+    });
+    const hostname = window.location.hostname;
+    if (hostname.endsWith(".hf.space") || hostname.includes(".dev.")) {
+      const origin = hostname.includes(".dev.")
+        ? `https://moon-${hostname.split(".")[1]}.dev.spaces.huggingface.tech`
+        : "https://huggingface.co";
+      window.parent.postMessage(ZEROGPU_HEADERS_MSG, origin);
+    }
+  </script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
