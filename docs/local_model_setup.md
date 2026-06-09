@@ -56,7 +56,7 @@ python app.py
 
 ## ZeroGPU lifecycle
 
-Inference runs inside `@spaces.GPU(duration=120)`. Nemotron OCR first extracts
+Inference runs inside `@spaces.GPU(duration=60)`. Nemotron OCR first extracts
 paragraph text from the screenshot, then MiniCPM5-1B assesses that text. The
 OCR pipeline is cached like NVIDIA's official Space. Local runs may also keep
 MiniCPM loaded; Space runs load and close the GGUF per allocated request.

@@ -184,10 +184,10 @@ def analyze_notice(
             message = str(exc)
             error_code = "ocrNoTextError"
         else:
-            message = str(exc)
+            message = "The local model is unavailable or could not be loaded."
             error_code = "modelUnavailableError"
-    except (RuntimeError, ValueError) as exc:
-        message = f"Temporary diagnostic: {type(exc).__name__}: {exc}"[:500]
+    except (RuntimeError, ValueError):
+        message = "The local model returned an invalid response. Please try again."
         error_code = "modelInvalidError"
 
     return finish(
