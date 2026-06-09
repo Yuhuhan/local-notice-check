@@ -239,10 +239,41 @@ function setRiskLabel(label) {
   elements.risk.textContent = t(keys[label] || label);
 }
 
+async function requestZeroGpuToken() {
+  if (!window.supports_zerogpu_headers) return null;
+  const hostname = window.location.hostname;
+  if (!hostname.endsWith(".hf.space") && !hostname.includes(".dev.")) return null;
+  const origin = hostname.includes(".dev.")
+    ? `https://moon-${hostname.split(".")[1]}.dev.spaces.huggingface.tech`
+    : "https://huggingface.co";
+  try {
+    return await new Promise((resolve) => {
+      const channel = new MessageChannel();
+      const timeout = setTimeout(() => {
+        channel.port1.close();
+        resolve(null);
+      }, 2000);
+      channel.port1.onmessage = ({ data }) => {
+        clearTimeout(timeout);
+        channel.port1.close();
+        resolve(data || null);
+      };
+      window.parent.postMessage("zerogpu-headers", origin, [channel.port2]);
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function callGradioApi(name, data) {
+  const headers = { "Content-Type": "application/json" };
+  const zerogpuToken = await requestZeroGpuToken();
+  if (zerogpuToken) {
+    headers["x-ip-token"] = zerogpuToken;
+  }
   const response = await fetch(`/gradio_api/call/${name}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ data }),
   });
   if (!response.ok) throw new Error(t("requestStartError"));
