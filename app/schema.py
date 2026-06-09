@@ -66,6 +66,12 @@ def normalize_assessment(value: Any) -> dict[str, Any]:
         if not isinstance(items, list):
             raise ValueError(f"{field} must be an array.")
         result[field] = [str(item).strip() for item in items if str(item).strip()]
-        if not result[field]:
-            raise ValueError(f"{field} must contain at least one item.")
+
+    if not result["red_flags"]:
+        result["red_flags"] = ["No specific red flags identified."]
+    if not result["safe_next_steps"]:
+        result["safe_next_steps"] = [
+            "Verify the message through official channels independently.",
+            "Do not share personal information or click links until verified.",
+        ]
     return result
