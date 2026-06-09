@@ -527,6 +527,46 @@ class TraceTests(unittest.TestCase):
         )
         llama_mock.assert_not_called()
 
+    def test_transformers_completion_uses_model_card_generation_flow(self) -> None:
+        assessment = {
+            "risk_label": "Likely scam",
+            "simple_explanation": "The message requests an OTP.",
+            "red_flags": ["OTP request"],
+            "safe_next_steps": ["Do not share the OTP."],
+            "reply_draft": "",
+        }
+
+        class Encoded(dict):
+            def to(self, device):
+                self["device"] = device
+                return self
+
+        class InputIds:
+            shape = (1, 12)
+
+        encoded = Encoded(input_ids=InputIds())
+        tokenizer = unittest.mock.Mock()
+        tokenizer.eos_token_id = 2
+        tokenizer.apply_chat_template.return_value = encoded
+        tokenizer.decode.return_value = json.dumps(assessment)
+        model = unittest.mock.Mock()
+        model.device = "cuda:0"
+        model.generate.return_value = [[0] * 13]
+
+        with patch(
+            "app.model_endpoint._get_transformers_model",
+            return_value=(tokenizer, model),
+        ):
+            result = model_endpoint._run_transformers_completion(
+                "Share your OTP now.",
+                "en",
+            )
+
+        self.assertEqual(result, assessment)
+        self.assertEqual(encoded["device"], "cuda:0")
+        tokenizer.apply_chat_template.assert_called_once()
+        model.generate.assert_called_once()
+
     def test_publisher_persists_batch(self) -> None:
         publisher = trace_runtime.TracePublisher()
         with tempfile.TemporaryDirectory() as directory, patch.object(

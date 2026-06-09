@@ -207,8 +207,9 @@ def _get_transformers_model() -> tuple[Any, Any]:
                 _TF_TOKENIZER = AutoTokenizer.from_pretrained(SPACE_MODEL_REPO)
                 _TF_MODEL = AutoModelForCausalLM.from_pretrained(
                     SPACE_MODEL_REPO,
-                    torch_dtype=torch.bfloat16,
-                ).to("cuda").eval()
+                    torch_dtype="auto",
+                    device_map="auto",
+                ).eval()
             except Exception as exc:
                 _TF_MODEL = None
                 _TF_TOKENIZER = None
@@ -230,10 +231,8 @@ def _run_transformers_completion(
         tokenize=True,
         add_generation_prompt=True,
         enable_thinking=model_config().enable_thinking,
-        return_tensors="pt",
-        return_dict=True,
     )
-    encoded = {name: tensor.to(model.device) for name, tensor in encoded.items()}
+    encoded = encoded.to(model.device)
     prompt_length = encoded["input_ids"].shape[1]
     with torch.no_grad():
         generated = model.generate(
