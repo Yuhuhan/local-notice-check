@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import gc
 import importlib.util
 import json
@@ -15,7 +16,7 @@ from typing import Any
 import spaces
 from huggingface_hub import hf_hub_download
 
-from app.config import ModelConfig, model_config
+from app.config import STATIC_DIR, ModelConfig, model_config
 from app.ocr import OCRRuntimeError, extract_text, ocr_installed
 from app.prompts import SYSTEM_PROMPT
 from app.schema import OUTPUT_SCHEMA, normalize_assessment
@@ -305,6 +306,30 @@ def probe_space_runtime() -> dict[str, str]:
         return {"stage": "complete", "error": "", "detail": content[:200]}
     except Exception as exc:
         return {"stage": "decode", "error": type(exc).__name__, "detail": str(exc)}
+
+
+@spaces.GPU(duration=120)
+def probe_ocr_runtime() -> dict[str, str]:
+    """Return sanitized diagnostics for OCR using the bundled public example."""
+    image_path = STATIC_DIR / "example-courier.jpeg"
+    image_data_url = (
+        "data:image/jpeg;base64,"
+        + base64.b64encode(image_path.read_bytes()).decode("ascii")
+    )
+    try:
+        text = extract_text(image_data_url)
+        return {"stage": "complete", "error": "", "detail": f"{len(text)} chars"}
+    except Exception as exc:
+        chain: list[str] = []
+        cause: BaseException | None = exc
+        while cause is not None and len(chain) < 5:
+            chain.append(f"{type(cause).__name__}: {cause}")
+            cause = cause.__cause__ or cause.__context__
+        return {
+            "stage": "ocr",
+            "error": type(exc).__name__,
+            "detail": " <- ".join(chain)[:1000],
+        }
 
 
 @spaces.GPU(duration=60)

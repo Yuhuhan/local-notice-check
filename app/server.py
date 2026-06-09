@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from gradio import Server
 
 from app.config import STATIC_DIR
-from app.model_endpoint import model_status, probe_space_runtime
+from app.model_endpoint import model_status, probe_ocr_runtime, probe_space_runtime
 from app.service import analyze_notice
 from app.trace import trace_status
 
@@ -49,6 +49,14 @@ def status_api() -> dict[str, Any]:
 )
 def runtime_probe_api() -> dict[str, str]:
     return probe_space_runtime()
+
+
+@app.api(
+    name="ocr_probe",
+    description="Return sanitized bundled-image OCR runtime diagnostics.",
+)
+def ocr_probe_api() -> dict[str, str]:
+    return probe_ocr_runtime()
 
 
 @app.api(
