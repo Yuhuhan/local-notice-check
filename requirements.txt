@@ -4,6 +4,7 @@ einops
 gradio==6.17.3
 huggingface_hub
 numpy
+open_clip_torch
 pillow
 spaces==0.50.4
 timm
