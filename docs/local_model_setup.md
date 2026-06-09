@@ -20,8 +20,9 @@ python -m pip install -r requirements.txt
 ```
 
 The OCR dependency is NVIDIA's prebuilt `cp312` wheel from its official
-ZeroGPU Space. PyTorch uses CUDA 12.8 wheels. MiniCPM uses Transformers on the
-same ZeroGPU allocation. The Space does not install `llama-cpp-python`.
+ZeroGPU Space. Hugging Face ZeroGPU supplies the managed PyTorch and GPU
+runtime; this project does not install CUDA packages. MiniCPM uses Transformers
+on the same allocation. The Space does not install `llama-cpp-python`.
 
 ## MiniCPM configuration
 
