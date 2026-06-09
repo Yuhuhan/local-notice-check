@@ -225,4 +225,9 @@ def call_model(
                     close()
                 del ephemeral_model
                 gc.collect()
-    raise ModelRuntimeError("The local model returned an invalid response.") from last_error
+    detail = (
+        f"{type(last_error).__name__}: {last_error}"
+        if last_error is not None
+        else "unknown generation error"
+    )
+    raise ModelRuntimeError(f"Temporary diagnostic: {detail[:500]}") from last_error
