@@ -270,9 +270,9 @@ textarea:disabled { opacity: .45; background: #f5f3ff; cursor: not-allowed; }
 .copy-button:hover { color: var(--indigo-800); border-color: #a5b4fc; }
 .reply-card { background: var(--indigo-50); }
 .explanation-card { grid-column: 1 / -1; }
-.disclaimer { margin-top: 10px; margin-bottom: 70px; padding: 22px; border: 1px solid #fed7aa; border-radius: 18px; background: var(--warm); }
-.disclaimer strong { color: #9a3412; }
-.disclaimer p { margin: 7px 0 0; color: #675f4e; line-height: 1.6; font-size: 14px; }
+.disclaimer { margin-top: 10px; margin-bottom: 70px; padding: 22px 24px; border: 1px solid #c7d2fe; border-radius: 18px; background: #eef2ff; }
+.disclaimer strong { color: #3730a3; }
+.disclaimer p { margin: 7px 0 0; color: #4338ca; line-height: 1.6; font-size: 14px; }
 footer { padding: 24px clamp(18px, 5vw, 72px); display: flex; justify-content: space-between; gap: 18px; color: #dddafe; background: var(--indigo-950); font-size: 12px; }
 
 html[lang="ur"] body {
