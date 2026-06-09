@@ -251,6 +251,44 @@ def _run_transformers_completion(
 
 
 @spaces.GPU(duration=60)
+def probe_space_runtime() -> dict[str, str]:
+    """Return sanitized fixed-input diagnostics for the Space model runtime."""
+    if not os.getenv("SPACE_ID"):
+        return {"stage": "environment", "error": "not_on_space"}
+    try:
+        tokenizer, model = _get_transformers_model()
+    except Exception as exc:
+        return {"stage": "load", "error": type(exc).__name__, "detail": str(exc)}
+    try:
+        encoded = tokenizer.apply_chat_template(
+            _messages("Reply with your OTP now.", "en"),
+            tokenize=True,
+            add_generation_prompt=True,
+            enable_thinking=False,
+        ).to(model.device)
+    except Exception as exc:
+        return {"stage": "encode", "error": type(exc).__name__, "detail": str(exc)}
+    try:
+        with __import__("torch").no_grad():
+            generated = model.generate(
+                **encoded,
+                max_new_tokens=16,
+                do_sample=False,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+    except Exception as exc:
+        return {"stage": "generate", "error": type(exc).__name__, "detail": str(exc)}
+    try:
+        content = tokenizer.decode(
+            generated[0][encoded["input_ids"].shape[1]:],
+            skip_special_tokens=True,
+        )
+        return {"stage": "complete", "error": "", "detail": content[:200]}
+    except Exception as exc:
+        return {"stage": "decode", "error": type(exc).__name__, "detail": str(exc)}
+
+
+@spaces.GPU(duration=60)
 def call_model(
     text: str,
     image_data_url: str = "",
