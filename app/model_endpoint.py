@@ -152,15 +152,14 @@ def _run_completion(
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.9 if config.enable_thinking else 0.7,
-        "top_p": 0.95,
+        "temperature": 0.2,
+        "top_p": 0.9,
         "max_tokens": 900 if config.enable_thinking else 550,
-    }
-    if not config.enable_thinking:
-        request["response_format"] = {
+        "response_format": {
             "type": "json_object",
             "schema": OUTPUT_SCHEMA,
-        }
+        },
+    }
     completion = model.create_chat_completion(
         **request,
     )

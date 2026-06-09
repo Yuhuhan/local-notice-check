@@ -62,5 +62,5 @@ def model_config() -> ModelConfig:
         ),
         verbose=_env_bool("MODEL_VERBOSE", False),
         keep_loaded=_env_bool("MODEL_KEEP_LOADED", not on_space),
-        enable_thinking=_env_bool("MODEL_ENABLE_THINKING", True),
+        enable_thinking=_env_bool("MODEL_ENABLE_THINKING", False),
     )

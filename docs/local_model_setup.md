@@ -40,11 +40,13 @@ $env:MODEL_REPO_ID = "openbmb/MiniCPM5-1B-GGUF"
 $env:MODEL_FILENAME = "MiniCPM5-1B-Q8_0.gguf"
 $env:MODEL_CONTEXT_SIZE = "8192"
 $env:MODEL_GPU_LAYERS = "-1"
-$env:MODEL_ENABLE_THINKING = "1"
+$env:MODEL_ENABLE_THINKING = "0"
 ```
 
-Use `MODEL_PATH` for an existing GGUF. Disable thinking with
-`MODEL_ENABLE_THINKING=0` for faster structured generation.
+Use `MODEL_PATH` for an existing GGUF. Schema-constrained generation is the
+default because it is more reliable for the application response contract.
+Set `MODEL_ENABLE_THINKING=1` only for experiments; it uses a larger token
+budget but still must produce schema-valid JSON.
 
 ```powershell
 python app.py --download-model

@@ -407,7 +407,7 @@ class TraceTests(unittest.TestCase):
         self.assertTrue(telemetry["parse_completed"])
         self.assertNotIn("normalize_completed", telemetry)
 
-    def test_local_completion_uses_urdu_budget(self) -> None:
+    def test_local_completion_uses_structured_output(self) -> None:
         valid = {
             "risk_label": "Verify first",
             "simple_explanation": "آزاد ذریعے سے تصدیق کریں۔",
@@ -420,10 +420,12 @@ class TraceTests(unittest.TestCase):
             def __init__(self):
                 self.calls = 0
                 self.max_tokens: list[int] = []
+                self.response_formats: list[dict] = []
 
             def create_chat_completion(self, **kwargs):
                 self.calls += 1
                 self.max_tokens.append(kwargs["max_tokens"])
+                self.response_formats.append(kwargs["response_format"])
                 return {
                     "choices": [
                         {
@@ -441,7 +443,8 @@ class TraceTests(unittest.TestCase):
         result = model_endpoint._run_completion(local_model, "test", "ur")
         self.assertEqual(result["risk_label"], "Verify first")
         self.assertEqual(local_model.calls, 1)
-        self.assertEqual(local_model.max_tokens, [900])
+        self.assertEqual(local_model.max_tokens, [550])
+        self.assertEqual(local_model.response_formats[0]["type"], "json_object")
 
     def test_ocr_extracts_paragraph_text(self) -> None:
         image_data = (
