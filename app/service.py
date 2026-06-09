@@ -186,8 +186,8 @@ def analyze_notice(
         else:
             message = str(exc)
             error_code = "modelUnavailableError"
-    except (RuntimeError, ValueError):
-        message = "The local model returned an invalid response. Please try again."
+    except (RuntimeError, ValueError) as exc:
+        message = f"Temporary diagnostic: {type(exc).__name__}: {exc}"[:500]
         error_code = "modelInvalidError"
 
     return finish(
