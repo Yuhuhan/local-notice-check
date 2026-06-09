@@ -258,11 +258,15 @@ def probe_space_runtime() -> dict[str, str]:
     try:
         tokenizer, model = _get_transformers_model()
     except Exception as exc:
-        cause = exc.__cause__ or exc
+        chain: list[str] = []
+        cause: BaseException | None = exc
+        while cause is not None and len(chain) < 5:
+            chain.append(f"{type(cause).__name__}: {cause}")
+            cause = cause.__cause__ or cause.__context__
         return {
             "stage": "load",
-            "error": type(cause).__name__,
-            "detail": str(cause)[:500],
+            "error": type(exc).__name__,
+            "detail": " <- ".join(chain)[:1000],
         }
     try:
         encoded = tokenizer.apply_chat_template(
