@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import gc
 import importlib.util
 import json
@@ -16,7 +15,7 @@ from typing import Any
 import spaces
 from huggingface_hub import hf_hub_download
 
-from app.config import STATIC_DIR, ModelConfig, model_config
+from app.config import ModelConfig, model_config
 from app.ocr import OCRRuntimeError, extract_text, ocr_installed
 from app.prompts import SYSTEM_PROMPT
 from app.schema import OUTPUT_SCHEMA, normalize_assessment
@@ -257,79 +256,6 @@ def _run_transformers_completion(
     if not content:
         raise ValueError("Model returned an empty response.")
     return _parse_model_json(content)
-
-
-@spaces.GPU(duration=60)
-def probe_space_runtime() -> dict[str, str]:
-    """Return sanitized fixed-input diagnostics for the Space model runtime."""
-    if not os.getenv("SPACE_ID"):
-        return {"stage": "environment", "error": "not_on_space"}
-    try:
-        tokenizer, model = _get_transformers_model()
-    except Exception as exc:
-        chain: list[str] = []
-        cause: BaseException | None = exc
-        while cause is not None and len(chain) < 5:
-            chain.append(f"{type(cause).__name__}: {cause}")
-            cause = cause.__cause__ or cause.__context__
-        return {
-            "stage": "load",
-            "error": type(exc).__name__,
-            "detail": " <- ".join(chain)[:1000],
-        }
-    try:
-        encoded = tokenizer.apply_chat_template(
-            _messages("Reply with your OTP now.", "en"),
-            tokenize=True,
-            add_generation_prompt=True,
-            enable_thinking=False,
-            return_tensors="pt",
-            return_dict=True,
-        ).to(model.device)
-    except Exception as exc:
-        return {"stage": "encode", "error": type(exc).__name__, "detail": str(exc)}
-    try:
-        with __import__("torch").no_grad():
-            generated = model.generate(
-                **encoded,
-                max_new_tokens=16,
-                do_sample=False,
-                pad_token_id=tokenizer.eos_token_id,
-            )
-    except Exception as exc:
-        return {"stage": "generate", "error": type(exc).__name__, "detail": str(exc)}
-    try:
-        content = tokenizer.decode(
-            generated[0][encoded["input_ids"].shape[1]:],
-            skip_special_tokens=True,
-        )
-        return {"stage": "complete", "error": "", "detail": content[:200]}
-    except Exception as exc:
-        return {"stage": "decode", "error": type(exc).__name__, "detail": str(exc)}
-
-
-@spaces.GPU(duration=120)
-def probe_ocr_runtime() -> dict[str, str]:
-    """Return sanitized diagnostics for OCR using the bundled public example."""
-    image_path = STATIC_DIR / "example-courier.jpeg"
-    image_data_url = (
-        "data:image/jpeg;base64,"
-        + base64.b64encode(image_path.read_bytes()).decode("ascii")
-    )
-    try:
-        text = extract_text(image_data_url)
-        return {"stage": "complete", "error": "", "detail": f"{len(text)} chars"}
-    except Exception as exc:
-        chain: list[str] = []
-        cause: BaseException | None = exc
-        while cause is not None and len(chain) < 5:
-            chain.append(f"{type(cause).__name__}: {cause}")
-            cause = cause.__cause__ or cause.__context__
-        return {
-            "stage": "ocr",
-            "error": type(exc).__name__,
-            "detail": " <- ".join(chain)[:1000],
-        }
 
 
 @spaces.GPU(duration=60)
