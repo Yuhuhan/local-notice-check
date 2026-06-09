@@ -49,20 +49,20 @@ def model_status() -> dict[str, Any]:
     ready = installed and configured
     return {
         "connected": ready,
-        "label": (
-            "Local models ready: MiniCPM5-1B + Nemotron OCR v2"
-            if ready
-            else "Local model setup required"
-        ),
+            "label": (
+                "Local models ready: MiniCPM5-1B + Nemotron-Parse v1.2"
+                if ready
+                else "Local model setup required"
+            ),
         "mode": "minicpm5_transformers" if on_space else "minicpm5_llama_cpp",
         "model": SPACE_MODEL_REPO if on_space else config.source,
         "compute": "zerogpu_cuda" if on_space else "local",
         "reasoning": config.enable_thinking,
         "ocr": {
-            "model": "nvidia/nemotron-ocr-v2",
+            "model": "nvidia/NVIDIA-Nemotron-Parse-v1.2",
             "installed": ocr_installed(),
-            "languages": ["en", "zh", "ja", "ko", "ru"],
-            "urdu_supported": False,
+            "languages": ["en", "multi"],
+            "urdu_supported": "best_effort",
             "roman_urdu": "best_effort_latin_script",
         },
         "privacy": "Inputs stay in this process and are not sent to a model API.",
@@ -307,11 +307,6 @@ def call_model(
             ocr_text = extract_text(image_data_url)
         except OCRRuntimeError as exc:
             raise ModelRuntimeError(str(exc)) from exc
-        if URDU_SCRIPT_PATTERN.search(ocr_text):
-            raise ModelRuntimeError(
-                "Urdu-script screenshots are not supported by Nemotron OCR v2. "
-                "Paste an English transcription instead."
-            )
         input_text = (
             f"{input_text}\n\nText extracted from screenshot:\n{ocr_text}"
             if input_text

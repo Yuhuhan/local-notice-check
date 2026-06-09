@@ -1,13 +1,9 @@
---extra-index-url https://download.pytorch.org/whl/cu128
-
 accelerate>=1.8
+albumentations
 gradio==6.17.3
 huggingface_hub
-nemotron-ocr @ https://huggingface.co/spaces/nvidia/nemotron-ocr-v2/resolve/main/nemotron_ocr-1.0.0-cp312-cp312-linux_x86_64.whl
 numpy
 pillow
-shapely>=2.1.2,<3
 spaces==0.50.4
-torch==2.9.1
-torchvision==0.24.1
+timm
 transformers>=5.6

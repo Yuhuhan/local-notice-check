@@ -1,27 +1,34 @@
-"""Nemotron OCR v2 adapter for screenshot text extraction."""
+"""Nemotron Parse v1.2 adapter for screenshot text extraction."""
 
 from __future__ import annotations
 
 import base64
-import ctypes
 import gc
-import importlib.util
 import io
+import logging
 import re
 import sys
 import threading
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 from PIL import Image
+
+logger = logging.getLogger("noticecheck.ocr")
+
+MODEL_ID = "nvidia/NVIDIA-Nemotron-Parse-v1.2"
+TASK_PROMPT = "</s><s><predict_bbox><predict_classes><output_markdown><predict_no_text_in_pic>"
 
 SUPPORTED_IMAGE_PATTERN = re.compile(
     r"^data:image/(?:png|jpeg|jpg|webp);base64,(.+)$",
     re.I | re.S,
 )
-_PIPELINES: dict[str, Any] = {}
-_PIPELINE_LOCK = threading.RLock()
+
+_MODEL: Any | None = None
+_PROCESSOR: Any | None = None
+_GEN_CONFIG: Any | None = None
+_POSTPROCESSING: Any | None = None
+_LOCK = threading.RLock()
 
 
 class OCRRuntimeError(RuntimeError):
@@ -29,7 +36,12 @@ class OCRRuntimeError(RuntimeError):
 
 
 def ocr_installed() -> bool:
-    return importlib.util.find_spec("nemotron_ocr") is not None
+    try:
+        from transformers import AutoModel, AutoProcessor  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
 
 
 def decode_image_data_url(image_data_url: str) -> bytes:
@@ -45,55 +57,117 @@ def decode_image_data_url(image_data_url: str) -> bytes:
     return image_bytes
 
 
-def _get_pipeline(language: str = "multi") -> Any:
-    with _PIPELINE_LOCK:
-        if language not in _PIPELINES:
-            try:
-                import torch
+def _load_postprocessing() -> Any:
+    """Download the repo's postprocessing helpers and import them."""
+    global _POSTPROCESSING
+    if _POSTPROCESSING is not None:
+        return _POSTPROCESSING
+    try:
+        from huggingface_hub import snapshot_download
 
-                for root in map(Path, sys.path):
-                    for library in root.glob("nvidia/cuda_runtime/lib/libcudart.so*"):
-                        ctypes.CDLL(str(library), mode=ctypes.RTLD_GLOBAL)
-                        break
-                if torch.cuda.is_available():
-                    torch.cuda.init()
-                from nemotron_ocr.inference.pipeline_v2 import NemotronOCRV2
-            except ImportError as exc:
-                raise OCRRuntimeError(
-                    "Nemotron OCR v2 or its CUDA runtime is unavailable."
-                ) from exc
-            _PIPELINES[language] = NemotronOCRV2(lang=language)
-        return _PIPELINES[language]
+        repo_dir = snapshot_download(repo_id=MODEL_ID, allow_patterns=["*.py"])
+        if repo_dir not in sys.path:
+            sys.path.insert(0, repo_dir)
+        import postprocessing
+
+        _POSTPROCESSING = postprocessing
+        return postprocessing
+    except Exception as exc:
+        logger.warning("Could not load postprocessing module: %s", exc)
+        return None
+
+
+def _get_model() -> tuple[Any, Any, Any]:
+    global _MODEL, _PROCESSOR, _GEN_CONFIG
+    with _LOCK:
+        if _MODEL is not None:
+            return _MODEL, _PROCESSOR, _GEN_CONFIG
+        try:
+            import torch
+            from transformers import AutoModel, AutoProcessor, GenerationConfig
+        except ImportError as exc:
+            raise OCRRuntimeError(
+                "Transformers is not installed."
+            ) from exc
+        try:
+            logger.info("Loading Nemotron-Parse-v1.2 model...")
+            _MODEL = (
+                AutoModel.from_pretrained(MODEL_ID, trust_remote_code=True, dtype="auto")
+                .to("cuda" if torch.cuda.is_available() else "cpu")
+                .eval()
+            )
+            _PROCESSOR = AutoProcessor.from_pretrained(MODEL_ID, trust_remote_code=True)
+            _GEN_CONFIG = GenerationConfig.from_pretrained(MODEL_ID, trust_remote_code=True)
+            logger.info("Nemotron-Parse-v1.2 loaded successfully.")
+        except Exception as exc:
+            _MODEL = None
+            _PROCESSOR = None
+            _GEN_CONFIG = None
+            raise OCRRuntimeError(
+                "Nemotron-Parse-v1.2 model could not be loaded."
+            ) from exc
+        return _MODEL, _PROCESSOR, _GEN_CONFIG
 
 
 def extract_text(image_data_url: str) -> str:
-    """Extract ordered paragraph text using NVIDIA's Space integration pattern."""
+    """Extract text from a screenshot using Nemotron-Parse-v1.2."""
     image_bytes = decode_image_data_url(image_data_url)
     try:
-        with Image.open(io.BytesIO(image_bytes)) as image:
-            image_array = np.array(image.convert("RGB"))
-        predictions = _get_pipeline("multi")(
-            image_array,
-            merge_level="paragraph",
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    except Exception as exc:
+        raise OCRRuntimeError("Could not open the uploaded image.") from exc
+
+    model, processor, gen_config = _get_model()
+    pp = _load_postprocessing()
+
+    try:
+        import torch
+
+        device = next(model.parameters()).device
+        dtype = next(model.parameters()).dtype
+
+        inputs = processor(
+            images=[image], text=TASK_PROMPT, return_tensors="pt", add_special_tokens=False
         )
-        text = "\n\n".join(
-            str(item.get("text", "")).strip()
-            for item in predictions
-            if isinstance(item, dict) and str(item.get("text", "")).strip()
-        ).strip()
+        inputs = {
+            k: (v.to(device, dtype) if torch.is_floating_point(v) else v.to(device))
+            for k, v in inputs.items()
+        }
+        with torch.no_grad():
+            outputs = model.generate(**inputs, generation_config=gen_config)
+        generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0]
+
+        if pp is not None:
+            try:
+                classes, bboxes, texts = pp.extract_classes_bboxes(generated_text)
+                texts = [
+                    pp.postprocess_text(t, cls=c, text_format="markdown")
+                    for t, c in zip(texts, classes)
+                ]
+                text = "\n\n".join(t.strip() for t in texts if t.strip())
+            except Exception:
+                text = generated_text.strip()
+        else:
+            text = generated_text.strip()
+
         if not text:
             raise OCRRuntimeError("No readable text was found in the screenshot.")
         return text
     except OCRRuntimeError:
         raise
     except Exception as exc:
-        raise OCRRuntimeError("Nemotron OCR could not read the screenshot.") from exc
+        logger.error("Nemotron-Parse inference failed: %s", exc)
+        raise OCRRuntimeError("Nemotron-Parse could not read the screenshot.") from exc
 
 
 def close_ocr() -> None:
-    """Release cached OCR pipelines for local shutdown or explicit cleanup."""
-    with _PIPELINE_LOCK:
-        _PIPELINES.clear()
+    """Release cached model for local shutdown or explicit cleanup."""
+    global _MODEL, _PROCESSOR, _GEN_CONFIG, _POSTPROCESSING
+    with _LOCK:
+        _MODEL = None
+        _PROCESSOR = None
+        _GEN_CONFIG = None
+        _POSTPROCESSING = None
     gc.collect()
     try:
         import torch
