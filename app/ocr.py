@@ -103,8 +103,9 @@ def _get_model() -> tuple[Any, Any, Any]:
             _MODEL = None
             _PROCESSOR = None
             _GEN_CONFIG = None
+            logger.error("Failed to load Nemotron-Parse-v1.2: %s: %s", type(exc).__name__, exc)
             raise OCRRuntimeError(
-                "Nemotron-Parse-v1.2 model could not be loaded."
+                f"Nemotron-Parse-v1.2 model could not be loaded: {exc}"
             ) from exc
         return _MODEL, _PROCESSOR, _GEN_CONFIG
 
