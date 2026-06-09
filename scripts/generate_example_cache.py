@@ -12,7 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import app  # noqa: E402
+from app.config import EXAMPLE_CACHE_PATH, model_config  # noqa: E402
+from app.model_endpoint import call_model  # noqa: E402
 
 TEXT_EXAMPLES = {
     "text-courier": (
@@ -66,7 +67,7 @@ def generate_assessment(
 ) -> dict[str, object]:
     last_issue = ""
     for attempt in range(1, 4):
-        assessment = app.call_model(text, image)
+        assessment = call_model(text, image)
         last_issue = quality_issue(example_id, assessment)
         if not last_issue:
             print(f"{example_id}: accepted on attempt {attempt}")
@@ -76,7 +77,7 @@ def generate_assessment(
 
 
 def main() -> None:
-    base_url, model_name, _ = app.env_config()
+    config = model_config()
     examples = {
         example_id: generate_assessment(example_id, text=text)
         for example_id, text in TEXT_EXAMPLES.items()
@@ -92,18 +93,18 @@ def main() -> None:
     )
 
     document = {
-        "model_repo": "unsloth/Qwen3.5-4B-MTP-GGUF",
-        "model_name": model_name,
-        "endpoint": base_url,
-        "endpoint_type": "Modal-hosted llama.cpp OpenAI-compatible endpoint",
+        "model_repo": config.repo_id,
+        "model_name": config.filename,
+        "endpoint": config.source,
+        "endpoint_type": "In-process llama.cpp runtime",
         "generated_at": date.today().isoformat(),
         "examples": examples,
     }
-    app.EXAMPLE_CACHE_PATH.write_text(
+    EXAMPLE_CACHE_PATH.write_text(
         json.dumps(document, indent=2, ensure_ascii=True) + "\n",
         encoding="utf-8",
     )
-    print(f"Generated {len(examples)} assessments in {app.EXAMPLE_CACHE_PATH}")
+    print(f"Generated {len(examples)} assessments in {EXAMPLE_CACHE_PATH}")
 
 
 if __name__ == "__main__":

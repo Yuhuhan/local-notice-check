@@ -22,21 +22,21 @@ const elements = {
 
 const translations = {
   en: {
-    pageTitle: "Pakistan Notice Helper",
-    pageDescription: "Check Pakistani notices and messages for common scam signals.",
+    pageTitle: "NoticeCheck",
+    pageDescription: "Review suspicious Pakistani messages before you click, pay, or reply.",
     statusChecking: "Checking model",
-    statusReady: "Modal model ready",
-    statusCredentials: "Modal credentials required",
-    statusUnavailable: "Modal model unavailable",
-    heroEyebrow: "Understand before you act",
-    heroTitle: "Does this notice look",
-    heroSafe: "safe?",
-    heroText: "Check suspicious bills, bank alerts, FBR-style messages, challans, courier notices, and SMS screenshots for common scam signals.",
-    trustTitle: "AI-assisted safety check",
-    trustText: "The AI reads the notice, identifies scam signals, and returns a structured risk assessment with safer next steps.",
-    checkerEyebrow: "Free safety check",
-    checkerTitle: "Check a notice or message",
-    modelDescription: "Analysis runs on the deployed Qwen3.5 4B multimodal model.",
+    statusReady: "Local model ready",
+    statusCredentials: "Local model setup required",
+    statusUnavailable: "Local model unavailable",
+    heroEyebrow: "Pause. Inspect. Decide.",
+    heroTitle: "Look twice before you",
+    heroSafe: "trust it.",
+    heroText: "NoticeCheck reviews suspicious messages and screenshots for pressure tactics, unsafe requests, and scam warning signs.",
+    trustTitle: "Evidence, not verification",
+    trustText: "Get a plain-language risk assessment, visible warning signs, and safer next actions. Always confirm independently.",
+    checkerEyebrow: "Message review",
+    checkerTitle: "What did you receive?",
+    modelDescription: "MiniCPM5-1B reasons locally through llama.cpp; Nemotron OCR v2 reads screenshots.",
     uploadLabel: "Upload a screenshot",
     dropImage: "Drop an image here",
     browseImage: "or tap to browse PNG, JPG, or WebP",
@@ -45,15 +45,15 @@ const translations = {
     imageMode: "Screenshot mode active — text input is locked",
     pasteLabel: "Or paste the message",
     textPlaceholder: "Paste the SMS, email, bill text, or notice here...",
-    languageSupport: "English, Urdu, and Roman Urdu supported",
+    languageSupport: "English is supported; Urdu and Roman Urdu are best effort",
     textMode: "Text mode active — image upload is locked",
     traceTitle: "Publish privacy-safe trace",
     traceText: "Stores automated redacted text or an image description. Raw text, screenshots, links, identifiers, and model text are not stored.",
     checkButton: "Check this notice",
     checkingButton: "Checking safely...",
     startOver: "Start over",
-    examplesEyebrow: "Try an example",
-    examplesTitle: "Common messages in Pakistan",
+    examplesEyebrow: "Practice cases",
+    examplesTitle: "Recognize the pressure pattern",
     courierFee: "Courier fee",
     courierFeeText: "Urgent parcel payment link",
     taxRefund: "Tax refund",
@@ -76,24 +76,24 @@ const translations = {
     copy: "Copy",
     copied: "Copied",
     disclaimerTitle: "Important safety note",
-    disclaimerText: "Pakistan Notice Helper does not provide official verification. It checks common scam signals and gives safe next steps. Always verify through official websites or helplines before making payments or sharing personal information.",
-    footerOne: "Built for safer digital decisions in Pakistan.",
+    disclaimerText: "NoticeCheck does not verify senders or provide legal or financial advice. Confirm through contact details you find independently before paying, clicking, replying, or sharing information.",
+    footerOne: "NoticeCheck · A local-first message review tool",
     footerTwo: "Never share OTPs, PINs, passwords, or CVVs.",
     requestStartError: "The app could not start the request.",
     requestReadError: "The app could not read the result.",
     requestFailedError: "The request could not be completed.",
     noResultError: "The app returned no result.",
     analyzeError: "Unable to analyze this input.",
-    modelCredentialsError: "Modal credentials are required.",
-    modelAuthError: "The model rejected the configured credentials.",
-    modelServiceError: "The model service returned an error. Please try again.",
+    modelConfigurationError: "The local model runtime is not configured.",
     modelUnavailableError: "The model is unavailable or still starting. Please try again.",
     modelInvalidError: "The model returned an incomplete response. Please try again.",
+    ocrUnavailableError: "Nemotron OCR is unavailable. Paste the notice text instead.",
+    ocrNoTextError: "No readable text was found in the screenshot.",
     imageTypeError: "Use a PNG, JPG, or WebP image.",
     imageSizeError: "Please choose an image smaller than 8 MB.",
     exampleImageError: "Could not load the example image.",
     emptyInputError: "Paste a message or upload a screenshot to continue.",
-    modelSource: "Analyzed by the deployed Qwen3.5 4B model endpoint.",
+    modelSource: "Analyzed by MiniCPM5-1B through llama.cpp.",
     cachedSource: "Cached model result",
     riskLooksNormal: "Looks normal",
     riskVerifyFirst: "Verify first",
@@ -102,21 +102,21 @@ const translations = {
     riskInappropriate: "Inappropriate",
   },
   ur: {
-    pageTitle: "پاکستان نوٹس ہیلپر",
+    pageTitle: "نوٹس چیک",
     pageDescription: "پاکستانی نوٹس اور پیغامات میں عام فراڈ کی علامات چیک کریں۔",
     statusChecking: "ماڈل کی دستیابی چیک ہو رہی ہے",
     statusReady: "ماڈل تیار ہے",
     statusCredentials: "ماڈل کی رسائی درکار ہے",
     statusUnavailable: "ماڈل فی الحال دستیاب نہیں",
-    heroEyebrow: "عمل کرنے سے پہلے سمجھیں",
-    heroTitle: "کیا یہ نوٹس",
-    heroSafe: "محفوظ لگتا ہے؟",
-    heroText: "مشکوک بل، بینک الرٹ، ایف بی آر کے نام سے آنے والے پیغامات، چالان، کوریئر نوٹس اور ایس ایم ایس اسکرین شاٹس میں فراڈ کی عام نشانیاں جانچیں۔",
-    trustTitle: "اے آئی سے حفاظتی جانچ",
-    trustText: "اے آئی نوٹس پڑھ کر فراڈ کی ممکنہ نشانیاں بتاتا ہے اور محفوظ اگلے اقدامات تجویز کرتا ہے۔",
-    checkerEyebrow: "مفت حفاظتی جانچ",
-    checkerTitle: "نوٹس یا پیغام جانچیں",
-    modelDescription: "یہ جانچ ایک چھوٹے ملٹی موڈل اے آئی ماڈل سے کی جاتی ہے۔",
+    heroEyebrow: "رکیں، دیکھیں، پھر فیصلہ کریں",
+    heroTitle: "بھروسا کرنے سے پہلے",
+    heroSafe: "دوبارہ دیکھیں",
+    heroText: "نوٹس چیک مشکوک پیغامات اور اسکرین شاٹس میں دباؤ، غیر محفوظ مطالبات اور فراڈ کی نشانیاں تلاش کرتا ہے۔",
+    trustTitle: "نشانیوں کا جائزہ، سرکاری تصدیق نہیں",
+    trustText: "سادہ خطرے کا جائزہ، نمایاں نشانیاں اور محفوظ اگلے اقدامات حاصل کریں۔ آزاد ذریعے سے لازماً تصدیق کریں۔",
+    checkerEyebrow: "پیغام کا جائزہ",
+    checkerTitle: "آپ کو کیا موصول ہوا؟",
+    modelDescription: "MiniCPM5-1B مقامی تجزیہ کرتا ہے اور Nemotron OCR اسکرین شاٹ پڑھتا ہے۔",
     uploadLabel: "اسکرین شاٹ اپ لوڈ کریں",
     dropImage: "تصویر یہاں اپ لوڈ کریں",
     browseImage: "یا پی این جی، جے پی جی یا ویب پی فائل منتخب کرنے کے لیے دبائیں",
@@ -125,15 +125,15 @@ const translations = {
     imageMode: "اسکرین شاٹ منتخب ہے، متن کا خانہ بند کر دیا گیا ہے",
     pasteLabel: "یا پیغام کا متن درج کریں",
     textPlaceholder: "ایس ایم ایس، ای میل، بل یا نوٹس کا متن یہاں پیسٹ کریں…",
-    languageSupport: "انگریزی، اردو اور رومن اردو کی معاونت موجود ہے",
+    languageSupport: "انگریزی معاون ہے؛ اردو اور رومن اردو تجرباتی ہیں",
     textMode: "متن درج ہے، تصویر اپ لوڈ کرنے کا اختیار بند ہے",
     traceTitle: "رازداری کے ساتھ گمنام ٹریس شائع کریں",
     traceText: "صرف چھپایا گیا متن یا تصویر کی عمومی تفصیل محفوظ ہوتی ہے۔ اصل پیغام، اسکرین شاٹ، لنک، شناختی معلومات اور ماڈل کا جواب محفوظ نہیں کیا جاتا۔",
     checkButton: "نوٹس جانچیں",
     checkingButton: "جانچ جاری ہے…",
     startOver: "دوبارہ شروع کریں",
-    examplesEyebrow: "مثال آزمائیں",
-    examplesTitle: "پاکستان میں عام پیغامات",
+    examplesEyebrow: "مثالی کیس",
+    examplesTitle: "دباؤ کے طریقے پہچانیں",
     courierFee: "کوریئر فیس",
     courierFeeText: "پارسل فیس کی فوری ادائیگی کا لنک",
     taxRefund: "ٹیکس ریفنڈ",
@@ -156,24 +156,24 @@ const translations = {
     copy: "کاپی کریں",
     copied: "کاپی ہو گیا",
     disclaimerTitle: "اہم حفاظتی نوٹ",
-    disclaimerText: "پاکستان نوٹس ہیلپر سرکاری تصدیق فراہم نہیں کرتا۔ یہ فراڈ کی عام نشانیاں دیکھ کر محفوظ اگلے اقدامات بتاتا ہے۔ ادائیگی کرنے یا ذاتی معلومات دینے سے پہلے ہمیشہ متعلقہ ادارے کی سرکاری ویب سائٹ، ایپ یا ہیلپ لائن سے تصدیق کریں۔",
-    footerOne: "پاکستان میں محفوظ ڈیجیٹل فیصلوں کے لیے تیار کیا گیا۔",
+    disclaimerText: "نوٹس چیک بھیجنے والے کی سرکاری تصدیق یا قانونی و مالی مشورہ فراہم نہیں کرتا۔ ادائیگی، لنک کھولنے، جواب دینے یا معلومات شیئر کرنے سے پہلے آزاد ذریعے سے تصدیق کریں۔",
+    footerOne: "نوٹس چیک · مقامی پیغام جائزہ ٹول",
     footerTwo: "اپنا او ٹی پی، پن، پاس ورڈ یا سی وی وی کبھی شیئر نہ کریں۔",
     requestStartError: "جانچ شروع نہیں ہو سکی۔",
     requestReadError: "جانچ کا نتیجہ موصول نہیں ہو سکا۔",
     requestFailedError: "درخواست مکمل نہیں ہو سکی۔",
     noResultError: "کوئی نتیجہ موصول نہیں ہوا۔",
     analyzeError: "اس مواد کی جانچ نہیں ہو سکی۔",
-    modelCredentialsError: "ماڈل تک رسائی کے لیے لاگ اِن معلومات درکار ہیں۔",
-    modelAuthError: "ماڈل نے موجودہ لاگ اِن معلومات قبول نہیں کیں۔",
-    modelServiceError: "ماڈل سروس میں خرابی آئی ہے۔ براہ کرم دوبارہ کوشش کریں۔",
+    modelConfigurationError: "مقامی ماڈل درست طریقے سے ترتیب نہیں دیا گیا۔",
     modelUnavailableError: "ماڈل دستیاب نہیں یا ابھی شروع ہو رہا ہے۔ براہ کرم دوبارہ کوشش کریں۔",
     modelInvalidError: "ماڈل کا جواب مکمل نہیں تھا۔ براہ کرم دوبارہ کوشش کریں۔",
+    ocrUnavailableError: "Nemotron OCR دستیاب نہیں۔ نوٹس کا متن پیسٹ کریں۔",
+    ocrNoTextError: "اسکرین شاٹ میں پڑھنے کے قابل متن نہیں ملا۔",
     imageTypeError: "PNG، JPG یا WebP تصویر استعمال کریں۔",
     imageSizeError: "براہ کرم 8 MB سے چھوٹی تصویر منتخب کریں۔",
     exampleImageError: "مثالی تصویر لوڈ نہیں ہو سکی۔",
     emptyInputError: "پیغام کا متن درج کریں یا اسکرین شاٹ اپ لوڈ کریں۔",
-    modelSource: "یہ نتیجہ Qwen3.5 4B ماڈل نے تیار کیا ہے۔",
+    modelSource: "یہ نتیجہ MiniCPM5-1B اور llama.cpp نے تیار کیا ہے۔",
     cachedSource: "پہلے سے محفوظ ماڈل نتیجہ",
     riskLooksNormal: "معمول کا پیغام",
     riskVerifyFirst: "پہلے تصدیق کریں",
@@ -186,7 +186,7 @@ const translations = {
 let imageDataUrl = "";
 let activeMode = null;
 let activeExampleId = "";
-let currentLanguage = localStorage.getItem("notice-helper-language") === "ur" ? "ur" : "en";
+let currentLanguage = localStorage.getItem("noticecheck-language") === "ur" ? "ur" : "en";
 let currentStatus = null;
 let currentRiskLabel = "";
 
@@ -196,7 +196,7 @@ function t(key) {
 
 function applyLanguage(language) {
   currentLanguage = language === "ur" ? "ur" : "en";
-  localStorage.setItem("notice-helper-language", currentLanguage);
+  localStorage.setItem("noticecheck-language", currentLanguage);
   document.documentElement.lang = currentLanguage;
   document.documentElement.dir = currentLanguage === "ur" ? "rtl" : "ltr";
   document.title = t("pageTitle");
@@ -287,7 +287,7 @@ async function loadStatus() {
   try {
     setStatus(await callGradioApi("status", []));
   } catch {
-    setStatus({ connected: false, label: "Modal model unavailable" });
+    setStatus({ connected: false, label: "Local model unavailable" });
   }
 }
 
@@ -351,14 +351,14 @@ function renderResult(payload) {
     replyCard.hidden = true;
   }
 
-  elements.source.textContent = payload.source === "model"
+  elements.source.textContent = payload.source === "local_model"
     ? t("modelSource")
-    : payload.source === "cached_modal_example"
+    : payload.source === "cached_local_example"
       ? t("cachedSource")
       : "";
   elements.source.classList.toggle(
     "cached-result",
-    payload.source === "cached_modal_example",
+    payload.source === "cached_local_example",
   );
   elements.results.hidden = false;
   elements.results.scrollIntoView({ behavior: "smooth", block: "start" });

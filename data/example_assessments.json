@@ -1,8 +1,8 @@
 {
-  "model_repo": "unsloth/Qwen3.5-4B-MTP-GGUF",
-  "model_name": "qwen3.5-4b-q8",
-  "endpoint": "https://abidali899--pakistan-scam-checker-qwen35-4b-q8-serve.modal.run",
-  "endpoint_type": "Modal-hosted llama.cpp OpenAI-compatible endpoint",
+  "model_repo": "legacy-precomputed",
+  "model_name": "historical-example-cache",
+  "endpoint": "bundled",
+  "endpoint_type": "Static examples; regenerate with the configured local MiniCPM runtime",
   "generated_at": "2026-06-08",
   "examples": {
     "text-courier": {

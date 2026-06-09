@@ -1,6 +1,6 @@
 ---
 license: cc-by-4.0
-pretty_name: Pakistan Notice Helper Privacy-Safe Traces
+pretty_name: NoticeCheck Privacy-Safe Traces
 task_categories:
   - text-classification
 language:
@@ -19,22 +19,22 @@ configs:
         path: data/**/*.jsonl
 ---
 
-# Pakistan Notice Helper Privacy-Safe Traces
+# NoticeCheck Privacy-Safe Traces
 
 ## Purpose
 
-This dataset contains compact, deterministic metadata about Pakistan Notice
-Helper scam-check requests. It does not contain hidden model reasoning or
+This dataset contains compact, deterministic metadata about NoticeCheck
+message-review requests. It does not contain hidden model reasoning or
 autonomous-agent trajectories.
 
-The application uses a Modal-hosted Qwen model for normal assessments. Creating
-a trace never makes an additional AI model call. Traces only observe the
-existing request path and convert it into allow-listed categories, booleans,
-and fixed descriptions. For image submissions, the existing assessment's
-explanation and red flags are inspected transiently for this mapping, but their
-text is not stored. The trace mapper predicts the privacy-safe image category
-and tactics directly from that result summary using deterministic English/Urdu
-evidence rules.
+The application uses MiniCPM5-1B through an in-process llama.cpp runtime, with
+Nemotron OCR v2 for supported screenshots. Creating a trace never makes an
+additional AI model call. Traces only observe the existing request path and
+convert it into allow-listed categories, booleans, and fixed descriptions. For
+image submissions, the existing assessment's explanation and red flags are
+inspected transiently for this mapping, but their text is not stored. The trace
+mapper predicts the privacy-safe image category and tactics directly from that
+result summary using deterministic English/Urdu evidence rules.
 
 ## Fields
 
@@ -55,7 +55,7 @@ combined into the single `scam_tactics` category column.
 
 Records do not contain pipeline steps, cache fields, app commits, failure
 details, request source, schema versions, size buckets, language hints, or
-Modal metadata.
+model runtime metadata.
 
 ## Privacy
 
@@ -85,8 +85,8 @@ successful assessments whose content is genuinely unclassified.
 
 ## Provenance
 
-Seed traces represent the six public examples bundled with Pakistan Notice
-Helper. Runtime traces may represent successful, rejected, or failed requests.
+Seed traces represent the six public examples bundled with NoticeCheck. Runtime
+traces may represent successful, rejected, or failed requests.
 Trace generation itself does not invoke the model.
 
 The seed rows are illustrative examples, not an evaluation split. All six
@@ -118,8 +118,7 @@ schema validation and a reproducible summary of these quality indicators.
 
 ## Links
 
-- App: https://huggingface.co/spaces/build-small-hackathon/pakistan-notice-helper
-- Source: https://github.com/kingabzpro/pakistan-notice-helper
+- App: https://huggingface.co/spaces/build-small-hackathon/pakistan-notice-helper-local
 
 ## License
 

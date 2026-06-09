@@ -1,42 +1,37 @@
-# Testing the Qwen Modal endpoint
+# Testing the local model
 
-The expected path is:
+The active inference path is:
 
 ```text
 Custom frontend
   -> queued Gradio backend
-  -> OpenAI Python SDK
-  -> deployed/local OpenAI-compatible endpoint
-  -> unsloth/Qwen3.5-4B-MTP-GGUF
+  -> Nemotron OCR v2 for screenshot text
+  -> app/model_endpoint.py
+  -> MiniCPM5-1B GGUF through llama-cpp-python
 ```
 
-## Modal configuration
+## Fast checks
 
-The app permanently defaults to the deployed experiment endpoint and model:
-
-```text
-https://abidali899--pakistan-scam-checker-qwen35-4b-q8-serve.modal.run
-qwen3.5-4b-q8
-```
-
-The endpoint uses Modal proxy authentication. Set its dedicated proxy token
-values as Space secrets or local environment variables:
+Run tests that do not load the model:
 
 ```powershell
-$env:MODAL_PROXY_KEY = "wk-..."
-$env:MODAL_PROXY_SECRET = "ws-..."
+python app.py --self-test
+python -m unittest
 ```
 
-These are not Modal CLI tokens. Do not commit secrets.
+Download the configured GGUF:
 
-## Contract test
+```powershell
+python app.py --download-model
+```
+
+Run a real text-generation contract test:
 
 ```powershell
 python app.py --test-endpoint
 ```
 
-The command sends a synthetic suspicious parcel message through the configured
-endpoint and exits unsuccessfully unless the response includes:
+The command fails unless the model returns all required fields:
 
 - `risk_label`
 - `simple_explanation`
@@ -44,22 +39,6 @@ endpoint and exits unsuccessfully unless the response includes:
 - `safe_next_steps`
 - `reply_draft`
 
-For vision verification, run the experiment's existing image test:
-
-```powershell
-python experiments/modal_qwen35_4b_q8/test_request.py
-```
-
-## Troubleshooting
-
-- **Modal credentials required:** set `MODAL_PROXY_KEY` and
-  `MODAL_PROXY_SECRET` in the process that launches the app.
-- **401:** use Modal Proxy Auth tokens beginning with `wk-` and `ws-`.
-- **503 or timeout:** the GPU container may be cold-starting. Increase
-  `MODEL_TIMEOUT_SECONDS` if needed.
-- **Image is ignored:** confirm `llama-server` loaded `mmproj-F16.gguf`.
-- **Invalid JSON:** retain JSON-schema response formatting and disable model
-  thinking. The app reports the model failure and does not create a fallback
-  assessment.
-- **Local URL fails:** ensure the base URL points to the server root or `/v1`,
-  not directly to `/chat/completions`.
+The old Modal deployments and request scripts are intentionally preserved under
+`experiments/` for comparison and reproducibility. They are not imported by the
+application.

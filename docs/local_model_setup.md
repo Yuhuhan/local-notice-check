@@ -1,41 +1,69 @@
 # Local model setup
 
-Pakistan Notice Helper currently defaults to its deployed Modal model. The
-OpenAI Python SDK is used only as a client for that OpenAI-compatible server.
+The application uses two local models:
 
-## Environment
+- `openbmb/MiniCPM5-1B-GGUF` through `llama-cpp-python` for reasoning
+- `nvidia/nemotron-ocr-v2` through its native PyTorch package for screenshots
+
+No remote model API is required.
+
+## Supported environment
+
+Nemotron OCR v2 requires Linux amd64, an NVIDIA GPU, CUDA build/runtime
+compatibility, and Python 3.12. The Space metadata pins Python 3.12.
+
+Install the configured dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+The OCR dependency is NVIDIA's prebuilt `cp312` wheel from its official
+ZeroGPU Space. This follows the installation used by
+`nvidia/nemotron-ocr-v2`. PyTorch uses CUDA 12.8 wheels. The official
+`llama-cpp-python` binary is the CUDA 12.4 build; both rely on the Space's
+newer NVIDIA driver for runtime compatibility.
+
+## MiniCPM configuration
+
+Defaults:
+
+```text
+openbmb/MiniCPM5-1B-GGUF
+MiniCPM5-1B-Q8_0.gguf
+```
+
+Overrides:
 
 ```powershell
-$env:MODEL_BASE_URL = "http://127.0.0.1:8080"
-$env:MODEL_NAME = "qwen3.5-4b-q8"
-$env:MODEL_API_KEY = ""
+$env:MODEL_REPO_ID = "openbmb/MiniCPM5-1B-GGUF"
+$env:MODEL_FILENAME = "MiniCPM5-1B-Q8_0.gguf"
+$env:MODEL_CONTEXT_SIZE = "8192"
+$env:MODEL_GPU_LAYERS = "-1"
+$env:MODEL_ENABLE_THINKING = "1"
+```
+
+Use `MODEL_PATH` for an existing GGUF. Disable thinking with
+`MODEL_ENABLE_THINKING=0` for faster structured generation.
+
+```powershell
+python app.py --download-model
+python app.py --test-endpoint
 python app.py
 ```
 
-`MODEL_BASE_URL` may include `/v1`; the app adds it when absent. An API key is
-optional for local servers. `MODEL_TIMEOUT_SECONDS` defaults to 180 seconds.
+## ZeroGPU lifecycle
 
-## llama.cpp example
+Inference runs inside `@spaces.GPU(duration=120)`. Nemotron OCR first extracts
+paragraph text from the screenshot, then MiniCPM5-1B assesses that text. The
+OCR pipeline is cached like NVIDIA's official Space. Local runs may also keep
+MiniCPM loaded; Space runs load and close the GGUF per allocated request.
 
-Start a recent `llama-server` build with the model and multimodal projector:
+## Language limits
 
-```bash
-llama-server \
-  --model Qwen3.5-4B-Q8_0.gguf \
-  --mmproj mmproj-F16.gguf \
-  --host 127.0.0.1 --port 8080 \
-  --ctx-size 8192 --n-gpu-layers all \
-  --jinja --flash-attn on \
-  --spec-type draft-mtp --spec-draft-n-max 2
-```
+Nemotron OCR v2 officially supports English, Chinese, Japanese, Korean, and
+Russian. It does not officially support Urdu script. Roman Urdu uses Latin
+characters and may be readable, but accuracy is not guaranteed.
 
-Images require the vision projector. Without `--mmproj`, use pasted text. The
-Space performs no OCR and does not send input to any separate OCR service.
-
-Run `python app.py --test-endpoint` before opening the UI. The test sends a
-synthetic suspicious Pakistan Post message and validates all output fields.
-
-These variables override the permanent Modal defaults, making the later switch
-to a local server possible without changing application code. There is no
-rule-based fallback: when the selected model is unavailable, the UI reports
-the error and does not return an assessment.
+MiniCPM5-1B is officially evaluated in English and Chinese. Urdu and Roman Urdu
+reasoning/output are best effort and must be validated on this app's data.

@@ -7,13 +7,13 @@ import tempfile
 import threading
 import time
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-import httpx
-from openai import APIStatusError, APITimeoutError
-
 import app
+from app import model_endpoint, service
+from app import ocr
 from traces import runtime as trace_runtime
 from traces.scripts.validate_traces import validate_file
 
@@ -263,23 +263,23 @@ class TraceTests(unittest.TestCase):
         self.assertIn("payment", record["scam_tactics"])
 
     def test_opt_out_does_not_queue_trace(self) -> None:
-        with patch("app.queue_trace") as queue_mock:
+        with patch("app.service.queue_trace") as queue_mock:
             result = app.analyze_notice("", "", save_trace=False)
         queue_mock.assert_not_called()
         self.assertEqual(result["trace"]["status"], "disabled")
 
     def test_cached_trace_does_not_call_model(self) -> None:
-        with patch("app.call_model") as model_mock, patch(
-            "app.queue_trace",
+        with patch("app.model_endpoint.call_model") as model_mock, patch(
+            "app.service.queue_trace",
             return_value=("trace-id", "queued"),
         ):
             result = app.analyze_notice(example_id="text-bank")
         model_mock.assert_not_called()
-        self.assertEqual(result["source"], "cached_modal_example")
+        self.assertEqual(result["source"], "cached_local_example")
 
     def test_empty_input_trace_has_no_failure_metadata(self) -> None:
         with patch(
-            "app.queue_trace",
+            "app.service.queue_trace",
             return_value=("trace-id", "queued"),
         ) as queue_mock:
             result = app.analyze_notice("")
@@ -289,16 +289,16 @@ class TraceTests(unittest.TestCase):
 
     def test_missing_credentials_traces_without_model_call(self) -> None:
         with patch(
-            "app.model_status",
+            "app.model_endpoint.model_status",
             return_value={"connected": False, "label": "missing"},
-        ), patch("app.call_model") as model_mock, patch(
-            "app.queue_trace",
+        ), patch("app.model_endpoint.call_model") as model_mock, patch(
+            "app.service.queue_trace",
             return_value=("trace-id", "queued"),
         ) as queue_mock:
             result = app.analyze_notice("test message")
         self.assertFalse(result["ok"])
         model_mock.assert_not_called()
-        self.assertEqual(result["error_code"], "modelCredentialsError")
+        self.assertEqual(result["error_code"], "modelConfigurationError")
         self.assertNotIn("modal_called", queue_mock.call_args.kwargs)
 
     def test_success_uses_existing_model_call_once(self) -> None:
@@ -310,23 +310,17 @@ class TraceTests(unittest.TestCase):
             "reply_draft": "Please confirm through your official channel.",
         }
 
-        def fake_call(_text, _image, telemetry):
-            telemetry.update(
-                {
-                    "modal_called": True,
-                    "modal_ms": 120,
-                    "retry_count": 1,
-                    "parse_ms": 1,
-                    "normalize_ms": 1,
-                }
-            )
+        def fake_call(_text, _image, _language):
             return assessment
 
         with patch(
-            "app.model_status",
+            "app.model_endpoint.model_status",
             return_value={"connected": True, "label": "ready"},
-        ), patch("app.call_model", side_effect=fake_call) as model_mock, patch(
-            "app.queue_trace",
+        ), patch(
+            "app.model_endpoint.call_model",
+            side_effect=fake_call,
+        ) as model_mock, patch(
+            "app.service.queue_trace",
             return_value=("trace-id", "queued"),
         ) as queue_mock:
             result = app.analyze_notice("test message")
@@ -344,10 +338,10 @@ class TraceTests(unittest.TestCase):
             "reply_draft": "Please confirm through an official channel.",
         }
         with patch(
-            "app.model_status",
+            "app.model_endpoint.model_status",
             return_value={"connected": True, "label": "ready"},
-        ), patch("app.call_model", return_value=assessment), patch(
-            "app.queue_trace",
+        ), patch("app.model_endpoint.call_model", return_value=assessment), patch(
+            "app.service.queue_trace",
             side_effect=RuntimeError("trace publisher failed"),
         ):
             result = app.analyze_notice("test message", save_trace=True)
@@ -357,12 +351,16 @@ class TraceTests(unittest.TestCase):
         self.assertEqual(result["trace"]["status"], "failed")
 
     def test_timeout_is_sanitized(self) -> None:
-        timeout = APITimeoutError(request=httpx.Request("POST", "https://example.invalid"))
         with patch(
-            "app.model_status",
+            "app.model_endpoint.model_status",
             return_value={"connected": True, "label": "ready"},
-        ), patch("app.call_model", side_effect=timeout), patch(
-            "app.queue_trace",
+        ), patch(
+            "app.model_endpoint.call_model",
+            side_effect=model_endpoint.ModelRuntimeError(
+                "The local GGUF model could not be loaded."
+            ),
+        ), patch(
+            "app.service.queue_trace",
             return_value=("trace-id", "queued"),
         ) as queue_mock:
             result = app.analyze_notice("test message")
@@ -371,30 +369,30 @@ class TraceTests(unittest.TestCase):
         self.assertNotIn("failure_category", queue_mock.call_args.kwargs)
 
     def test_http_failure_is_sanitized(self) -> None:
-        request = httpx.Request("POST", "https://example.invalid")
-        error = APIStatusError(
-            "service unavailable",
-            response=httpx.Response(503, request=request),
-            body={"private": "must not be traced"},
-        )
         with patch(
-            "app.model_status",
+            "app.model_endpoint.model_status",
             return_value={"connected": True, "label": "ready"},
-        ), patch("app.call_model", side_effect=error), patch(
-            "app.queue_trace",
+        ), patch(
+            "app.model_endpoint.call_model",
+            side_effect=model_endpoint.ModelRuntimeError("private runtime failure"),
+        ), patch(
+            "app.service.queue_trace",
             return_value=("trace-id", "queued"),
         ) as queue_mock:
             result = app.analyze_notice("test message")
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error_code"], "modelServiceError")
+        self.assertEqual(result["error_code"], "modelUnavailableError")
         self.assertNotIn("private", json.dumps(queue_mock.call_args.kwargs))
 
     def test_malformed_output_is_sanitized(self) -> None:
         with patch(
-            "app.model_status",
+            "app.model_endpoint.model_status",
             return_value={"connected": True, "label": "ready"},
-        ), patch("app.call_model", side_effect=ValueError("PRIVATE RAW OUTPUT")), patch(
-            "app.queue_trace",
+        ), patch(
+            "app.model_endpoint.call_model",
+            side_effect=ValueError("PRIVATE RAW OUTPUT"),
+        ), patch(
+            "app.service.queue_trace",
             return_value=("trace-id", "queued"),
         ) as queue_mock:
             result = app.analyze_notice("test message")
@@ -409,49 +407,7 @@ class TraceTests(unittest.TestCase):
         self.assertTrue(telemetry["parse_completed"])
         self.assertNotIn("normalize_completed", telemetry)
 
-    def test_model_retry_is_counted_without_extra_trace_call(self) -> None:
-        request = httpx.Request("POST", "https://example.invalid")
-        unavailable = APIStatusError(
-            "unavailable",
-            response=httpx.Response(503, request=request),
-            body=None,
-        )
-
-        class Completions:
-            def __init__(self):
-                self.calls = 0
-
-            def create(self, **_kwargs):
-                self.calls += 1
-                if self.calls == 1:
-                    raise unavailable
-                message = type("Message", (), {"content": json.dumps({
-                    "risk_label": "Verify first",
-                    "simple_explanation": "Verify independently.",
-                    "red_flags": ["Unverified sender"],
-                    "safe_next_steps": ["Use an official channel."],
-                    "reply_draft": "Please confirm through an official channel.",
-                })})()
-                choice = type("Choice", (), {"message": message})()
-                return type("Completion", (), {"choices": [choice]})()
-
-        completions = Completions()
-        client = type(
-            "Client",
-            (),
-            {"chat": type("Chat", (), {"completions": completions})()},
-        )()
-        telemetry: dict = {}
-        with patch("app.create_model_client", return_value=(client, "model")), patch.dict(
-            "os.environ",
-            {"MODEL_MAX_ATTEMPTS": "2", "MODEL_RETRY_DELAY_SECONDS": "0"},
-        ):
-            result = app.call_model("test", "", telemetry)
-        self.assertEqual(result["risk_label"], "Verify first")
-        self.assertEqual(completions.calls, 2)
-        self.assertEqual(telemetry["retry_count"], 1)
-
-    def test_invalid_model_json_is_retried_with_larger_urdu_budget(self) -> None:
+    def test_local_completion_uses_urdu_budget(self) -> None:
         valid = {
             "risk_label": "Verify first",
             "simple_explanation": "آزاد ذریعے سے تصدیق کریں۔",
@@ -460,40 +416,86 @@ class TraceTests(unittest.TestCase):
             "reply_draft": "براہ کرم سرکاری ذریعے سے تصدیق کریں۔",
         }
 
-        class Completions:
+        class LocalModel:
             def __init__(self):
                 self.calls = 0
                 self.max_tokens: list[int] = []
 
-            def create(self, **kwargs):
+            def create_chat_completion(self, **kwargs):
                 self.calls += 1
                 self.max_tokens.append(kwargs["max_tokens"])
-                content = "{" if self.calls == 1 else json.dumps(valid)
-                message = type("Message", (), {"content": content})()
-                choice = type("Choice", (), {"message": message})()
-                return type("Completion", (), {"choices": [choice]})()
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": (
+                                    "<think>private reasoning</think>\n"
+                                    + json.dumps(valid)
+                                )
+                            }
+                        }
+                    ]
+                }
 
-        completions = Completions()
-        client = type(
-            "Client",
-            (),
-            {"chat": type("Chat", (), {"completions": completions})()},
-        )()
-        telemetry: dict = {}
-        with patch("app.create_model_client", return_value=(client, "model")), patch.dict(
-            "os.environ",
-            {"MODEL_MAX_ATTEMPTS": "2", "MODEL_RETRY_DELAY_SECONDS": "0"},
-        ):
-            result = app.call_model(
-                "test",
-                "",
-                telemetry,
-                output_language="ur",
-            )
-
+        local_model = LocalModel()
+        result = model_endpoint._run_completion(local_model, "test", "ur")
         self.assertEqual(result["risk_label"], "Verify first")
-        self.assertEqual(completions.calls, 2)
-        self.assertEqual(completions.max_tokens, [550, 550])
+        self.assertEqual(local_model.calls, 1)
+        self.assertEqual(local_model.max_tokens, [900])
+
+    def test_ocr_extracts_paragraph_text(self) -> None:
+        image_data = (
+            "data:image/png;base64,"
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNg"
+            "YAAAAAMAASsJTYQAAAAASUVORK5CYII="
+        )
+        fake_pipeline = unittest.mock.Mock(
+            return_value=[
+                {"text": "PAKISTAN POST", "confidence": 0.99},
+                {"text": "Pay Rs. 85 now", "confidence": 0.98},
+            ]
+        )
+        with patch("app.ocr._get_pipeline", return_value=fake_pipeline):
+            text = ocr.extract_text(image_data)
+        self.assertEqual(text, "PAKISTAN POST\n\nPay Rs. 85 now")
+        fake_pipeline.assert_called_once()
+
+    def test_image_ocr_text_is_passed_to_minicpm(self) -> None:
+        config = model_endpoint.model_config()
+        fake_model = object()
+        assessment = {
+            "risk_label": "Likely scam",
+            "simple_explanation": "Urgent payment request.",
+            "red_flags": ["Untrusted payment request"],
+            "safe_next_steps": ["Verify through an official channel."],
+            "reply_draft": "",
+        }
+        with patch(
+            "app.model_endpoint.extract_text",
+            return_value="Pay Rs. 85 immediately",
+        ), patch(
+            "app.model_endpoint.model_config",
+            return_value=replace(config, keep_loaded=False),
+        ), patch(
+            "app.model_endpoint._build_model",
+            return_value=fake_model,
+        ), patch(
+            "app.model_endpoint._run_completion",
+            return_value=assessment,
+        ) as completion_mock:
+            result = model_endpoint.call_model(
+                "",
+                (
+                    "data:image/png;base64,"
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4"
+                    "nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+                ),
+            )
+        self.assertEqual(result, assessment)
+        self.assertEqual(
+            completion_mock.call_args.args[1],
+            "Pay Rs. 85 immediately",
+        )
 
     def test_publisher_persists_batch(self) -> None:
         publisher = trace_runtime.TracePublisher()
