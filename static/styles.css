@@ -100,8 +100,7 @@ h1 > span:last-child { color: #fda4af; }
   display: flex; align-items: center; justify-content: center;
 }
 .hero-image {
-  max-width: 100%; height: auto; border-radius: 16px;
-  box-shadow: 0 25px 60px rgba(0,0,0,.3);
+  max-width: 100%; height: auto; display: block;
 }
 .shield {
   width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center;
