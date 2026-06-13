@@ -17,11 +17,11 @@ configs:
     default: true
     data_files:
       - split: train
-        path: data/seed/trace_samples.jsonl
-  - config_name: operational
+        path: data/*/*/*/*.jsonl
+  - config_name: examples
     data_files:
       - split: train
-        path: data/*/*/*/*.jsonl
+        path: data/seed/trace_samples.jsonl
 ---
 
 # NoticeCheck Privacy-Safe Traces
@@ -92,19 +92,19 @@ successful assessments whose content is genuinely unclassified.
 
 ## Provenance
 
-The default configuration contains the six reviewed public examples bundled
-with NoticeCheck. The `operational` configuration contains privacy-safe runtime
-traces and may include successful, rejected, or failed requests.
+The default configuration contains privacy-safe runtime traces and may include
+successful, rejected, or failed requests. The `examples` configuration contains
+the six reviewed public examples bundled with NoticeCheck.
 Trace generation itself does not invoke the model.
 
 The seed rows are illustrative examples, not an evaluation split. All six
 currently have the `Likely scam` label, so they must not be used to estimate
 class balance, accuracy, recall, or real-world scam prevalence.
 
-Operational rows intentionally preserve repeated requests. Consequently,
+Default runtime rows intentionally preserve repeated requests. Consequently,
 repeated examples, unclassified image descriptions, and incomplete `none`
-assessments may be common. For training or evaluation, curate the
-`operational` configuration by:
+assessments may be common. For training or evaluation, curate the default
+configuration by:
 
 - exclude `risk_label: none`
 - review or exclude unclassified image rows
