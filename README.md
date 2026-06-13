@@ -32,8 +32,13 @@ short_description: Review suspicious Pakistani messages before you act.
 
 # NoticeCheck
 
-NoticeCheck is a local-first safety assistant for suspicious Pakistani messages,
-bills, bank alerts, challans, courier notices, and screenshots. It returns:
+This repository is the local version of the
+[Pakistan Notice Helper Hugging Face Space](https://huggingface.co/spaces/build-small-hackathon/pakistan-notice-helper).
+It keeps the same notice-checking purpose, but uses a redesigned interface and
+uses the Hugging Face ZeroGPU runtime.
+
+NoticeCheck is a safety assistant for suspicious Pakistani messages, bills,
+bank alerts, challans, courier notices, and screenshots. It returns:
 
 - a risk label
 - a short explanation based on visible evidence
@@ -61,13 +66,16 @@ MiniCPM5-1B through Transformers on ZeroGPU
 Structured risk assessment
 ```
 
-- **Space reasoning:** `openbmb/MiniCPM5-1B` through Transformers
+- **Reasoning:** `openbmb/MiniCPM5-1B` through Transformers
 - **OCR:** `nvidia/NVIDIA-Nemotron-Parse-v1.2` through Transformers
-- **Hosting:** Hugging Face Spaces ZeroGPU
-- **Interface:** custom English HTML, CSS, and JavaScript
+- **Compute:** Hugging Face Spaces ZeroGPU
+- **Interface:** redesigned custom HTML, CSS, and JavaScript
+- **Language:** English only
 
 The application does not use a remote model API and has no heuristic assessment
 fallback. Model and OCR failures are returned explicitly.
+
+Both models run through Transformers on the Hugging Face ZeroGPU deployment.
 
 ## Repository Layout
 
@@ -104,13 +112,17 @@ python -m unittest
 node --check static/app.js
 ```
 
-## Language Limits
+## English-Only Interface
 
-Nemotron-Parse v1.2 supports document text extraction across multiple
-languages. Urdu-script screenshots are best effort.
+This version intentionally uses an English-only interface and requests English
+analysis from the model. Most notices and scam messages targeted by the project
+contain English or English mixed with common local terms. The local model also
+understands the task instructions and produces structured English results more
+reliably than Urdu output.
 
-MiniCPM5-1B is officially evaluated in English and Chinese. Urdu and Roman Urdu
-responses remain best effort and require task-specific evaluation.
+Screenshot OCR may detect text from other languages, but the generated
+assessment is intended to be in English. Urdu-language output is not currently
+supported.
 
 ## Privacy-Safe Traces
 

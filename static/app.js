@@ -92,7 +92,7 @@ const translations = {
     modelInvalidError: "The model returned an incomplete response. Please try again.",
     gpuQuotaError: "GPU quota exceeded. Please try again later or authenticate with a Hugging Face token for more quota.",
     ocrUnavailableError: "Nemotron-Parse is unavailable. Paste the notice text instead.",
-    ocrNoTextError: "No readable text was found in the screenshot.",
+    noticeImageRequiredWarning: "This image does not contain readable notice text. Upload a clear screenshot of the full notice or message.",
     ocrLanguageError: "This language may not be fully supported. Results may vary.",
     imageTypeError: "Use a PNG, JPG, or WebP image.",
     imageSizeError: "Please choose an image smaller than 8 MB.",
@@ -177,7 +177,7 @@ const translations = {
     modelInvalidError: "ماڈل کا جواب مکمل نہیں تھا۔ براہ کرم دوبارہ کوشش کریں۔",
     gpuQuotaError: "GPU کوٹہ ختم ہو گیا۔ براہ کرم بعد میں دوبارہ کوشش کریں یا مزید کوٹہ کے لیے Hugging Face ٹوکن سے تصدیق کریں۔",
     ocrUnavailableError: "Nemotron-Parse دستیاب نہیں۔ نوٹس کا متن پیسٹ کریں۔",
-    ocrNoTextError: "اسکرین شاٹ میں پڑھنے کے قابل متن نہیں ملا۔",
+    noticeImageRequiredWarning: "اس تصویر میں نوٹس کا واضح متن موجود نہیں ہے۔ مکمل نوٹس یا پیغام کا صاف اسکرین شاٹ اپ لوڈ کریں۔",
     ocrLanguageError: "یہ زبان مکمل طور پر سپورٹ نہیں ہو سکتی۔ نتائج مختلف ہو سکتے ہیں۔",
     imageTypeError: "PNG، JPG یا WebP تصویر استعمال کریں۔",
     imageSizeError: "براہ کرم 8 MB سے چھوٹی تصویر منتخب کریں۔",
@@ -329,9 +329,10 @@ async function loadStatus() {
   }
 }
 
-function showError(message = "") {
+function showError(message = "", tone = "error") {
   elements.error.textContent = message;
   elements.error.classList.toggle("visible", Boolean(message));
+  elements.error.classList.toggle("warning", Boolean(message) && tone === "warning");
 }
 
 function setMode(mode) {
@@ -369,6 +370,12 @@ function renderResult(payload) {
     const localizedError = payload.error_code
       ? translations[currentLanguage][payload.error_code]
       : "";
+    if (payload.warning) {
+      elements.results.hidden = true;
+      setStatus(payload.status);
+      showError(localizedError || payload.error || t("analyzeError"), "warning");
+      return;
+    }
     throw new Error(localizedError || payload.error || t("analyzeError"));
   }
   const result = payload.assessment;

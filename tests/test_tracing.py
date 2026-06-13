@@ -400,6 +400,26 @@ class TraceTests(unittest.TestCase):
         self.assertEqual(result["error_code"], "modelInvalidError")
         self.assertNotIn("PRIVATE RAW OUTPUT", json.dumps(queue_mock.call_args.kwargs))
 
+    def test_image_without_notice_text_returns_input_warning(self) -> None:
+        with patch(
+            "app.model_endpoint.model_status",
+            return_value={"connected": True, "label": "ready"},
+        ), patch(
+            "app.model_endpoint.call_model",
+            side_effect=model_endpoint.NoticeImageInputError(
+                "No readable notice text was found in the screenshot."
+            ),
+        ):
+            result = app.analyze_notice(
+                image_data_url="data:image/png;base64,AAAA",
+                save_trace=False,
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertTrue(result["warning"])
+        self.assertEqual(result["error_code"], "noticeImageRequiredWarning")
+        self.assertTrue(result["status"]["connected"])
+
     def test_normalization_failure_uses_normalize_stage(self) -> None:
         telemetry: dict = {}
         with self.assertRaises(ValueError):
@@ -466,6 +486,28 @@ class TraceTests(unittest.TestCase):
             text = ocr.extract_text(image_data)
         self.assertEqual(text, "PAKISTAN POST\n\nPay Rs. 85 now")
         fake_pipeline.assert_called_once()
+
+    def test_ocr_readability_rejects_parser_markup_without_notice_text(self) -> None:
+        self.assertFalse(
+            ocr._has_readable_text(
+                "<picture><x_10><y_20><x_900><y_700></picture>"
+            )
+        )
+        self.assertTrue(ocr._has_readable_text("Pay Rs. 85 now"))
+        self.assertTrue(ocr._has_readable_text("آپ کا بل 500 روپے ہے"))
+
+    def test_no_text_ocr_error_becomes_notice_image_input_error(self) -> None:
+        with patch(
+            "app.model_endpoint.extract_text",
+            side_effect=ocr.NoReadableTextError(
+                "No readable notice text was found in the screenshot."
+            ),
+        ):
+            with self.assertRaises(model_endpoint.NoticeImageInputError):
+                model_endpoint.call_model(
+                    "",
+                    "data:image/png;base64,AAAA",
+                )
 
     def test_image_ocr_text_is_passed_to_minicpm(self) -> None:
         config = model_endpoint.model_config()

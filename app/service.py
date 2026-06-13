@@ -176,13 +176,23 @@ def analyze_notice(
                 "source": "local_model",
             }
         )
+    except model_endpoint.NoticeImageInputError:
+        return finish(
+            {
+                "ok": False,
+                "warning": True,
+                "error": (
+                    "This image does not contain readable notice text. "
+                    "Upload a clear screenshot of the full notice or message."
+                ),
+                "error_code": "noticeImageRequiredWarning",
+                "status": status,
+            }
+        )
     except model_endpoint.ModelRuntimeError as exc:
         if image_data_url and "Nemotron-Parse" in str(exc):
             message = str(exc)
             error_code = "ocrUnavailableError"
-        elif image_data_url and "No readable text" in str(exc):
-            message = str(exc)
-            error_code = "ocrNoTextError"
         else:
             message = "The local model is unavailable or could not be loaded."
             error_code = "modelUnavailableError"

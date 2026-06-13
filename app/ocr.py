@@ -32,6 +32,17 @@ class OCRRuntimeError(RuntimeError):
     """A sanitized OCR failure safe to expose through the API."""
 
 
+class NoReadableTextError(OCRRuntimeError):
+    """The image was valid, but it did not contain useful notice text."""
+
+
+def _has_readable_text(text: str) -> bool:
+    """Reject empty OCR output and model markup without visible notice text."""
+    visible_text = re.sub(r"<[^>]+>", " ", text)
+    alphanumeric = [char for char in visible_text if char.isalnum()]
+    return len(alphanumeric) >= 4 and any(char.isalpha() for char in alphanumeric)
+
+
 def ocr_installed() -> bool:
     try:
         from transformers import AutoModel, AutoProcessor  # noqa: F401
@@ -144,8 +155,10 @@ def extract_text(image_data_url: str) -> str:
         else:
             text = generated_text.strip()
 
-        if not text:
-            raise OCRRuntimeError("No readable text was found in the screenshot.")
+        if not _has_readable_text(text):
+            raise NoReadableTextError(
+                "No readable notice text was found in the screenshot."
+            )
         return text
     except OCRRuntimeError:
         raise

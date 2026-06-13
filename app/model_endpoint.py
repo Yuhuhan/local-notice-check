@@ -16,7 +16,7 @@ import spaces
 from huggingface_hub import hf_hub_download
 
 from app.config import ModelConfig, model_config
-from app.ocr import OCRRuntimeError, extract_text, ocr_installed
+from app.ocr import NoReadableTextError, OCRRuntimeError, extract_text, ocr_installed
 from app.prompts import SYSTEM_PROMPT
 from app.schema import OUTPUT_SCHEMA, normalize_assessment
 
@@ -32,6 +32,10 @@ URDU_SCRIPT_PATTERN = re.compile(r"[\u0600-\u06ff]")
 
 class ModelRuntimeError(RuntimeError):
     """A sanitized local model failure safe to expose through the API."""
+
+
+class NoticeImageInputError(ModelRuntimeError):
+    """The uploaded image is not a readable notice or message."""
 
 
 def model_status() -> dict[str, Any]:
@@ -297,6 +301,8 @@ def call_model(
     if image_data_url:
         try:
             ocr_text = extract_text(image_data_url)
+        except NoReadableTextError as exc:
+            raise NoticeImageInputError(str(exc)) from exc
         except OCRRuntimeError as exc:
             raise ModelRuntimeError(str(exc)) from exc
         input_text = (
