@@ -40,18 +40,39 @@ notices, challans, emails, and screenshots. Each assessment provides:
 The hosted demo runs on Hugging Face ZeroGPU. The same Transformers pipeline can
 run privately on a local NVIDIA GPU with Docker Compose.
 
+> [!NOTE]
+> NoticeCheck is the local-capable successor to my original Hugging Face
+> Hackathon project. The interface is English-only, while the analysis is
+> designed around notices and scam patterns commonly seen in Pakistan.
+
 ## How It Works
 
-```text
-Text or screenshot
-        |
-        +--> NVIDIA Nemotron-Parse v1.2 extracts screenshot text
-        |
-        v
-MiniCPM5-1B produces a structured risk assessment
-        |
-        v
-Risk label, red flags, safe actions, and optional reply
+```mermaid
+flowchart LR
+    A{Input type}
+    B[Text notice]
+    C[Screenshot]
+    D[NVIDIA Nemotron-Parse v1.2]
+    E[Extracted text]
+    F[MiniCPM5-1B]
+    G[Structured risk assessment]
+    H[Risk label]
+    I[Warning signs]
+    J[Safer actions]
+    K[Optional reply]
+    L[(Privacy-safe trace)]
+
+    A -->|Paste message| B
+    A -->|Upload image| C
+    C --> D --> E
+    B --> F
+    E --> F
+    F --> G
+    G --> H
+    G --> I
+    G --> J
+    G --> K
+    G -. Optional and redacted .-> L
 ```
 
 | Component | Technology |
@@ -67,10 +88,10 @@ Risk label, red flags, safe actions, and optional reply
 
 ### Requirements
 
-- Docker Engine with Docker Compose 2.30 or newer
-- a supported NVIDIA GPU and current NVIDIA driver
-- NVIDIA Container Toolkit on Linux
-- enough disk space and VRAM for both models
+> [!IMPORTANT]
+> Local inference requires Docker Compose 2.30 or newer, a supported NVIDIA GPU
+> with a current driver, and NVIDIA Container Toolkit on Linux. Ensure the
+> system has enough disk space and VRAM for both models.
 
 Start the application:
 
@@ -83,7 +104,10 @@ Open <http://localhost:7860>.
 The first startup downloads both models. Files are retained in a Docker volume,
 so later starts do not download them again.
 
-Optional `.env` values:
+<details>
+<summary><strong>Optional environment variables</strong></summary>
+
+Create a `.env` file beside `compose.yaml` when you need to override defaults:
 
 ```dotenv
 NOTICECHECK_PORT=7860
@@ -92,7 +116,12 @@ MODEL_ENABLE_THINKING=0
 HF_TOKEN=
 ```
 
-Stop the application:
+</details>
+
+<details>
+<summary><strong>Stop or completely remove the local stack</strong></summary>
+
+Stop the containers:
 
 ```bash
 docker compose down
@@ -104,6 +133,8 @@ Remove the containers and downloaded model volumes:
 docker compose down --volumes
 ```
 
+</details>
+
 ## Privacy
 
 Local Docker inference does not send notices or screenshots to a remote model
@@ -112,6 +143,10 @@ links, identifiers, and complete model responses.
 
 See the [trace dataset card](traces/dataset_card.md) for the schema and privacy
 rules.
+
+> [!TIP]
+> Leave `HF_TOKEN` empty to run locally without publishing privacy-safe traces
+> to Hugging Face.
 
 ## Language
 
@@ -127,10 +162,11 @@ detect other languages, but Urdu output is not currently supported.
 
 ## Safety
 
-NoticeCheck is decision support, not proof that a sender is genuine. Never share
-OTPs, PINs, passwords, CVVs, CNIC numbers, or card details. Verify suspicious
-messages through an official website, app, statement, card, or independently
-located helpline.
+> [!WARNING]
+> NoticeCheck provides decision support, not proof that a sender is genuine.
+> Never share OTPs, PINs, passwords, CVVs, CNIC numbers, or card details.
+> Verify suspicious messages through an official website, app, statement,
+> card, or independently located helpline.
 
 ## License
 
