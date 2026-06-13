@@ -22,7 +22,7 @@
 
 ![NoticeCheck demo](docs/app-demo.gif)
 
-NoticeCheck is a local-capable version of my earlier
+NoticeCheck is the fully local version of my earlier
 [Pakistan Notice Helper](https://huggingface.co/spaces/build-small-hackathon/pakistan-notice-helper),
 created for the Hugging Face Hackathon. It helps people review suspicious
 Pakistani messages and screenshots before acting on them.
