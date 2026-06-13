@@ -51,6 +51,7 @@ on a local NVIDIA GPU.
 - [GitHub repository](https://github.com/kingabzpro/local-notice-check)
 - [LinkedIn project post](https://www.linkedin.com/posts/1abidaliawan_huggingfacehackathon-huggingface-ai-ugcPost-7471594790506192896--_53/)
 - [Demo GIF](docs/app-demo.gif)
+- [Field notes: making NoticeCheck fully local](docs/field-notes.md)
 - [Privacy-safe trace dataset](https://huggingface.co/datasets/build-small-hackathon/pakistan-notice-helper-traces)
 
 NoticeCheck is a safety assistant for suspicious Pakistani messages, bills,
