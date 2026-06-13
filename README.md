@@ -48,6 +48,7 @@ on a local NVIDIA GPU.
 ## Project Links
 
 - [Live Hugging Face Space](https://huggingface.co/spaces/build-small-hackathon/noticecheck)
+- [GitHub repository](https://github.com/kingabzpro/local-notice-check)
 - [LinkedIn project post](https://www.linkedin.com/posts/1abidaliawan_huggingfacehackathon-huggingface-ai-ugcPost-7471594790506192896--_53/)
 - [Demo GIF](docs/app-demo.gif)
 - [Privacy-safe trace dataset](https://huggingface.co/datasets/build-small-hackathon/pakistan-notice-helper-traces)
