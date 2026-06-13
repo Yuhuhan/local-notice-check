@@ -77,10 +77,63 @@ fallback. Model and OCR failures are returned explicitly.
 
 Both models run through Transformers on the Hugging Face ZeroGPU deployment.
 
+## Run Locally With Docker and CUDA
+
+The included Compose setup runs the same Transformers pipeline entirely on a
+local NVIDIA GPU. It does not use ZeroGPU or a remote inference API.
+
+Prerequisites:
+
+- Docker Engine with Docker Compose 2.30 or newer, or Docker Desktop with the
+  WSL 2 backend
+- a supported NVIDIA GPU and current NVIDIA driver
+- NVIDIA Container Toolkit when using Docker Engine on Linux
+- enough GPU memory for MiniCPM5-1B and Nemotron-Parse v1.2
+
+Start the application:
+
+```bash
+docker compose up --build
+```
+
+Open <http://localhost:7860>. The first startup takes longer because both model
+repositories are downloaded. Downloads are retained in the
+`huggingface-cache` Docker volume.
+
+Verify that PyTorch can access the local GPU:
+
+```bash
+docker compose run --rm noticecheck python -c \
+  "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+```
+
+Optional environment overrides can be placed in a local `.env` file:
+
+```dotenv
+NOTICECHECK_PORT=7860
+TRANSFORMERS_MODEL_REPO=openbmb/MiniCPM5-1B
+MODEL_ENABLE_THINKING=0
+HF_TOKEN=
+```
+
+Stop the application without deleting downloaded models:
+
+```bash
+docker compose down
+```
+
+To also remove the model cache and trace volumes:
+
+```bash
+docker compose down --volumes
+```
+
 ## Repository Layout
 
 ```text
 app.py                 Thin Space launcher
+Dockerfile             Local CUDA image
+compose.yaml           Local NVIDIA GPU deployment
 app/
   cli.py               CLI and startup
   config.py            Environment configuration

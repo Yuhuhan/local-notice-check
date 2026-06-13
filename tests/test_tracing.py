@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import app
-from app import model_endpoint, service
+from app import config, model_endpoint, service
 from app import ocr
 from traces import runtime as trace_runtime
 from traces.scripts.validate_traces import validate_file
@@ -471,21 +471,41 @@ class TraceTests(unittest.TestCase):
         )
 
     def test_ocr_extracts_paragraph_text(self) -> None:
+        import torch
+
         image_data = (
             "data:image/png;base64,"
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNg"
             "YAAAAAMAASsJTYQAAAAASUVORK5CYII="
         )
-        fake_pipeline = unittest.mock.Mock(
-            return_value=[
-                {"text": "PAKISTAN POST", "confidence": 0.99},
-                {"text": "Pay Rs. 85 now", "confidence": 0.98},
-            ]
+        parameter = unittest.mock.Mock(device=torch.device("cpu"), dtype=torch.float32)
+        model = unittest.mock.Mock()
+        model.parameters.side_effect = lambda: iter([parameter])
+        model.generate.return_value = torch.tensor([[1, 2, 3]])
+        processor = unittest.mock.Mock()
+        processor.return_value = {"pixel_values": torch.ones(1)}
+        processor.batch_decode.return_value = ["model output"]
+        postprocessing = unittest.mock.Mock()
+        postprocessing.extract_classes_bboxes.return_value = (
+            ["paragraph", "paragraph"],
+            [None, None],
+            ["PAKISTAN POST", "Pay Rs. 85 now"],
         )
-        with patch("app.ocr._get_pipeline", return_value=fake_pipeline):
+        postprocessing.postprocess_text.side_effect = (
+            lambda text, **_kwargs: text
+        )
+
+        with patch(
+            "app.ocr._get_model",
+            return_value=(model, processor, unittest.mock.Mock()),
+        ), patch(
+            "app.ocr._load_postprocessing",
+            return_value=postprocessing,
+        ):
             text = ocr.extract_text(image_data)
+
         self.assertEqual(text, "PAKISTAN POST\n\nPay Rs. 85 now")
-        fake_pipeline.assert_called_once()
+        model.generate.assert_called_once()
 
     def test_ocr_readability_rejects_parser_markup_without_notice_text(self) -> None:
         self.assertFalse(
@@ -495,6 +515,46 @@ class TraceTests(unittest.TestCase):
         )
         self.assertTrue(ocr._has_readable_text("Pay Rs. 85 now"))
         self.assertTrue(ocr._has_readable_text("آپ کا بل 500 روپے ہے"))
+
+    def test_ocr_rejects_picture_region_with_generated_description(self) -> None:
+        import torch
+
+        image_data = (
+            "data:image/png;base64,"
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNg"
+            "YAAAAAMAASsJTYQAAAAASUVORK5CYII="
+        )
+        parameter = unittest.mock.Mock(device=torch.device("cpu"), dtype=torch.float32)
+        model = unittest.mock.Mock()
+        model.parameters.side_effect = lambda: iter([parameter])
+        model.generate.return_value = torch.tensor([[1, 2, 3]])
+        processor = unittest.mock.Mock()
+        processor.return_value = {"pixel_values": torch.ones(1)}
+        processor.batch_decode.return_value = ["generated picture output"]
+        postprocessing = unittest.mock.Mock()
+        postprocessing.extract_classes_bboxes.return_value = (
+            ["Picture"],
+            [None],
+            ["A portrait of a woman"],
+        )
+
+        with patch(
+            "app.ocr._get_model",
+            return_value=(model, processor, unittest.mock.Mock()),
+        ), patch(
+            "app.ocr._load_postprocessing",
+            return_value=postprocessing,
+        ):
+            with self.assertRaises(ocr.NoReadableTextError):
+                ocr.extract_text(image_data)
+
+        postprocessing.postprocess_text.assert_not_called()
+
+    def test_ocr_keeps_text_regions_next_to_a_picture(self) -> None:
+        self.assertFalse(ocr._is_text_class("Picture"))
+        self.assertFalse(ocr._is_text_class("page-image"))
+        self.assertTrue(ocr._is_text_class("Paragraph"))
+        self.assertTrue(ocr._is_text_class("Table"))
 
     def test_no_text_ocr_error_becomes_notice_image_input_error(self) -> None:
         with patch(
@@ -572,6 +632,42 @@ class TraceTests(unittest.TestCase):
             "en",
         )
         llama_mock.assert_not_called()
+
+    def test_explicit_local_transformers_runtime_avoids_llama_cpp(self) -> None:
+        assessment = {
+            "risk_label": "Verify first",
+            "simple_explanation": "Confirm the sender independently.",
+            "red_flags": ["Unverified sender"],
+            "safe_next_steps": ["Use an official contact channel."],
+            "reply_draft": "I will verify this independently.",
+        }
+        with patch.dict(
+            "os.environ",
+            {"MODEL_RUNTIME": "transformers"},
+            clear=False,
+        ), patch(
+            "app.model_endpoint._run_transformers_completion",
+            return_value=assessment,
+        ) as transformers_mock, patch(
+            "app.model_endpoint._build_model",
+        ) as llama_mock:
+            result = model_endpoint.call_model("Please pay this fee now.")
+
+        self.assertEqual(result, assessment)
+        transformers_mock.assert_called_once_with(
+            "Please pay this fee now.",
+            "en",
+        )
+        llama_mock.assert_not_called()
+
+    def test_invalid_model_runtime_is_rejected(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {"MODEL_RUNTIME": "invalid"},
+            clear=False,
+        ):
+            with self.assertRaisesRegex(ValueError, "MODEL_RUNTIME"):
+                config.model_runtime()
 
     def test_transformers_completion_uses_model_card_generation_flow(self) -> None:
         assessment = {
@@ -654,23 +750,39 @@ class TraceTests(unittest.TestCase):
         self.assertEqual(result, assessment)
         self.assertEqual(model.generate.call_count, 2)
 
-    def test_urdu_script_ocr_returns_language_error(self) -> None:
-        with patch(
+    def test_urdu_script_ocr_is_assessed_with_english_output(self) -> None:
+        assessment = {
+            "risk_label": "Verify first",
+            "simple_explanation": "Confirm the sender independently.",
+            "red_flags": ["Unverified sender"],
+            "safe_next_steps": ["Use an official contact channel."],
+            "reply_draft": "I will verify this independently.",
+        }
+        with patch.dict(
+            "os.environ",
+            {"MODEL_RUNTIME": "transformers"},
+            clear=False,
+        ), patch(
             "app.model_endpoint.extract_text",
             return_value="آپ کا اکاؤنٹ بند ہو جائے گا",
-        ):
-            with self.assertRaisesRegex(
-                model_endpoint.ModelRuntimeError,
-                "Urdu-script screenshots",
-            ):
-                model_endpoint.call_model(
-                    "",
-                    (
-                        "data:image/png;base64,"
-                        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lE"
-                        "QVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
-                    ),
-                )
+        ), patch(
+            "app.model_endpoint._run_transformers_completion",
+            return_value=assessment,
+        ) as completion_mock:
+            result = model_endpoint.call_model(
+                "",
+                (
+                    "data:image/png;base64,"
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lE"
+                    "QVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+                ),
+            )
+
+        self.assertEqual(result, assessment)
+        completion_mock.assert_called_once_with(
+            "آپ کا اکاؤنٹ بند ہو جائے گا",
+            "en",
+        )
 
     def test_publisher_persists_batch(self) -> None:
         publisher = trace_runtime.TracePublisher()

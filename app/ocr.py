@@ -13,6 +13,8 @@ from typing import Any
 
 from PIL import Image
 
+from app.config import cuda_required
+
 MODEL_ID = "nvidia/NVIDIA-Nemotron-Parse-v1.2"
 TASK_PROMPT = "</s><s><predict_bbox><predict_classes><output_markdown><predict_no_text_in_pic>"
 
@@ -26,6 +28,7 @@ _PROCESSOR: Any | None = None
 _GEN_CONFIG: Any | None = None
 _POSTPROCESSING: Any | None = None
 _LOCK = threading.RLock()
+NON_TEXT_CLASSES = {"figure", "image", "picture"}
 
 
 class OCRRuntimeError(RuntimeError):
@@ -41,6 +44,15 @@ def _has_readable_text(text: str) -> bool:
     visible_text = re.sub(r"<[^>]+>", " ", text)
     alphanumeric = [char for char in visible_text if char.isalnum()]
     return len(alphanumeric) >= 4 and any(char.isalpha() for char in alphanumeric)
+
+
+def _is_text_class(value: Any) -> bool:
+    """Return whether a Nemotron region represents document text."""
+    normalized = re.sub(r"[^a-z]+", " ", str(value).lower()).strip()
+    return not any(
+        token in NON_TEXT_CLASSES
+        for token in normalized.split()
+    )
 
 
 def ocr_installed() -> bool:
@@ -96,6 +108,10 @@ def _get_model() -> tuple[Any, Any, Any]:
             raise OCRRuntimeError(
                 "Transformers is not installed."
             ) from exc
+        if cuda_required() and not torch.cuda.is_available():
+            raise OCRRuntimeError(
+                "CUDA is required but is not available to PyTorch."
+            )
         try:
             _MODEL = (
                 AutoModel.from_pretrained(MODEL_ID, trust_remote_code=True, dtype="auto")
@@ -145,11 +161,22 @@ def extract_text(image_data_url: str) -> str:
         if pp is not None:
             try:
                 classes, bboxes, texts = pp.extract_classes_bboxes(generated_text)
-                texts = [
-                    pp.postprocess_text(t, cls=c, text_format="markdown")
-                    for t, c in zip(texts, classes)
+                text_regions = [
+                    pp.postprocess_text(region_text, cls=region_class, text_format="markdown")
+                    for region_text, region_class in zip(texts, classes)
+                    if _is_text_class(region_class)
                 ]
-                text = "\n\n".join(t.strip() for t in texts if t.strip())
+                text = "\n\n".join(
+                    region.strip()
+                    for region in text_regions
+                    if _has_readable_text(region)
+                )
+                if not text and classes:
+                    raise NoReadableTextError(
+                        "No readable notice text was found in the screenshot."
+                    )
+            except NoReadableTextError:
+                raise
             except Exception:
                 text = generated_text.strip()
         else:

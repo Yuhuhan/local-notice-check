@@ -18,6 +18,23 @@ def _env_bool(name: str, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def model_runtime() -> str:
+    """Select Transformers on Spaces or when explicitly requested locally."""
+    configured = os.getenv("MODEL_RUNTIME", "").strip().lower()
+    if configured:
+        if configured not in {"transformers", "llama_cpp"}:
+            raise ValueError(
+                "MODEL_RUNTIME must be 'transformers' or 'llama_cpp'."
+            )
+        return configured
+    return "transformers" if os.getenv("SPACE_ID") else "llama_cpp"
+
+
+def cuda_required() -> bool:
+    """Return whether startup should fail instead of falling back to CPU."""
+    return _env_bool("REQUIRE_CUDA", False)
+
+
 @dataclass(frozen=True)
 class ModelConfig:
     repo_id: str
@@ -39,8 +56,8 @@ class ModelConfig:
 
 
 def model_config() -> ModelConfig:
-    """Return llama.cpp settings for local GGUF inference."""
-    on_space = bool(os.getenv("SPACE_ID"))
+    """Return shared generation settings and llama.cpp fallback settings."""
+    using_transformers = model_runtime() == "transformers"
     return ModelConfig(
         repo_id=os.getenv(
             "MODEL_REPO_ID",
@@ -61,6 +78,6 @@ def model_config() -> ModelConfig:
             float(os.getenv("MODEL_RETRY_DELAY_SECONDS", "1")),
         ),
         verbose=_env_bool("MODEL_VERBOSE", False),
-        keep_loaded=_env_bool("MODEL_KEEP_LOADED", not on_space),
+        keep_loaded=_env_bool("MODEL_KEEP_LOADED", not using_transformers),
         enable_thinking=_env_bool("MODEL_ENABLE_THINKING", False),
     )

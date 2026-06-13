@@ -1,0 +1,40 @@
+services:
+  noticecheck:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${NOTICECHECK_PORT:-7860}:7860"
+    environment:
+      MODEL_RUNTIME: transformers
+      REQUIRE_CUDA: "1"
+      TRANSFORMERS_MODEL_REPO: "${TRANSFORMERS_MODEL_REPO:-openbmb/MiniCPM5-1B}"
+      MODEL_ENABLE_THINKING: "${MODEL_ENABLE_THINKING:-0}"
+      HF_HOME: /root/.cache/huggingface
+      HF_TOKEN: "${HF_TOKEN:-}"
+      GRADIO_ANALYTICS_ENABLED: "False"
+    volumes:
+      - huggingface-cache:/root/.cache/huggingface
+      - noticecheck-traces:/app/traces/pending
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/health', timeout=5)"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10m
+    restart: unless-stopped
+
+volumes:
+  huggingface-cache:
+  noticecheck-traces:

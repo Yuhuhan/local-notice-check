@@ -15,7 +15,7 @@ from typing import Any
 import spaces
 from huggingface_hub import hf_hub_download
 
-from app.config import ModelConfig, model_config
+from app.config import ModelConfig, cuda_required, model_config, model_runtime
 from app.ocr import NoReadableTextError, OCRRuntimeError, extract_text, ocr_installed
 from app.prompts import SYSTEM_PROMPT
 from app.schema import OUTPUT_SCHEMA, normalize_assessment
@@ -26,7 +26,10 @@ _MODEL_LOCK = threading.RLock()
 _TF_MODEL: Any | None = None
 _TF_TOKENIZER: Any | None = None
 _TF_LOCK = threading.RLock()
-SPACE_MODEL_REPO = os.getenv("SPACE_MODEL_REPO", "openbmb/MiniCPM5-1B").strip()
+TRANSFORMERS_MODEL_REPO = os.getenv(
+    "TRANSFORMERS_MODEL_REPO",
+    os.getenv("SPACE_MODEL_REPO", "openbmb/MiniCPM5-1B"),
+).strip()
 URDU_SCRIPT_PATTERN = re.compile(r"[\u0600-\u06ff]")
 
 
@@ -40,24 +43,42 @@ class NoticeImageInputError(ModelRuntimeError):
 
 def model_status() -> dict[str, Any]:
     config = model_config()
-    on_space = bool(os.getenv("SPACE_ID"))
+    runtime = model_runtime()
+    using_transformers = runtime == "transformers"
     installed = importlib.util.find_spec(
-        "transformers" if on_space else "llama_cpp"
+        "transformers" if using_transformers else "llama_cpp"
     ) is not None
-    configured = bool(SPACE_MODEL_REPO) if on_space else bool(
+    configured = bool(TRANSFORMERS_MODEL_REPO) if using_transformers else bool(
         config.model_path or (config.repo_id and config.filename)
     )
-    ready = installed and configured
+    cuda_ready = True
+    if using_transformers and cuda_required():
+        try:
+            import torch
+
+            cuda_ready = torch.cuda.is_available()
+        except ImportError:
+            cuda_ready = False
+    ready = installed and configured and cuda_ready
+    on_space = bool(os.getenv("SPACE_ID"))
     return {
         "connected": ready,
-            "label": (
-                "Local models ready"
-                if ready
-                else "Local model setup required"
-            ),
-        "mode": "minicpm5_transformers" if on_space else "minicpm5_llama_cpp",
-        "model": SPACE_MODEL_REPO if on_space else config.source,
-        "compute": "zerogpu_cuda" if on_space else "local",
+        "label": (
+            "Local models ready"
+            if ready
+            else "CUDA is unavailable"
+            if using_transformers and not cuda_ready
+            else "Local model setup required"
+        ),
+        "mode": f"minicpm5_{runtime}",
+        "model": TRANSFORMERS_MODEL_REPO if using_transformers else config.source,
+        "compute": (
+            "zerogpu_cuda"
+            if on_space
+            else "local_cuda"
+            if using_transformers and cuda_ready
+            else "local"
+        ),
         "reasoning": config.enable_thinking,
         "ocr": {
             "model": "nvidia/NVIDIA-Nemotron-Parse-v1.2",
@@ -218,10 +239,16 @@ def _get_transformers_model() -> tuple[Any, Any]:
                 raise ModelRuntimeError(
                     "Transformers MiniCPM runtime is not installed."
                 ) from exc
+            if cuda_required() and not torch.cuda.is_available():
+                raise ModelRuntimeError(
+                    "CUDA is required but is not available to PyTorch."
+                )
             try:
-                _TF_TOKENIZER = AutoTokenizer.from_pretrained(SPACE_MODEL_REPO)
+                _TF_TOKENIZER = AutoTokenizer.from_pretrained(
+                    TRANSFORMERS_MODEL_REPO
+                )
                 _TF_MODEL = AutoModelForCausalLM.from_pretrained(
-                    SPACE_MODEL_REPO,
+                    TRANSFORMERS_MODEL_REPO,
                     torch_dtype="auto",
                     device_map="auto",
                 ).eval()
@@ -297,6 +324,7 @@ def call_model(
 ) -> dict[str, Any]:
     """Run Transformers on Spaces and llama.cpp for local installations."""
     config = model_config()
+    runtime = model_runtime()
     input_text = text.strip()
     if image_data_url:
         try:
@@ -317,7 +345,7 @@ def call_model(
     for attempt in range(attempts):
         ephemeral_model: Any | None = None
         try:
-            if os.getenv("SPACE_ID"):
+            if runtime == "transformers":
                 return _run_transformers_completion(input_text, output_language)
             model = (
                 _get_persistent_model(config)

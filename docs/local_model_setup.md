@@ -1,76 +1,93 @@
-# Local model setup
+# Local CUDA model setup
 
-The application has separate Space and local runtimes:
+The Docker Compose deployment runs the application completely locally:
 
-- **Space:** `openbmb/MiniCPM5-1B` through Transformers, plus
-  `nvidia/nemotron-ocr-v2` for screenshots
-- **Local:** `openbmb/MiniCPM5-1B-GGUF` through `llama-cpp-python`
+- `openbmb/MiniCPM5-1B` through Transformers
+- `nvidia/NVIDIA-Nemotron-Parse-v1.2` through Transformers
+- PyTorch CUDA on one local NVIDIA GPU
 
-No remote model API is required.
+It does not set `SPACE_ID`, request ZeroGPU, or call a remote inference API.
+Internet access is required on the first run to download model files from
+Hugging Face.
 
-## Supported environment
+## Prerequisites
 
-Nemotron OCR v2 requires Linux amd64, an NVIDIA GPU, CUDA build/runtime
-compatibility, and Python 3.12. The Space metadata pins Python 3.12.
+Use a Linux amd64 Docker host with:
 
-Install the Space dependencies:
+- Docker Engine and Docker Compose 2.30 or newer
+- an NVIDIA GPU supported by CUDA 12.8
+- a current NVIDIA driver
+- NVIDIA Container Toolkit configured for Docker
+
+On Windows, use Docker Desktop with its WSL 2 backend and an NVIDIA driver that
+supports CUDA in WSL.
+
+Confirm GPU access before building the application:
 
 ```bash
-python -m pip install -r requirements.txt
+docker run --rm --gpus all \
+  pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime \
+  python -c "import torch; print(torch.cuda.is_available())"
 ```
 
-The OCR dependency is NVIDIA's prebuilt `cp312` wheel from its official
-ZeroGPU Space. The Space uses the matching CUDA 12.8 pair `torch==2.9.1` and
-`torchvision==0.24.1` for NVIDIA's native OCR extension. MiniCPM uses
-Transformers on the same ZeroGPU allocation. The Space does not install
-`llama-cpp-python`.
+## Start
 
-## MiniCPM configuration
+```bash
+docker compose up --build
+```
 
-Defaults:
+The startup process preloads Nemotron-Parse before opening port `7860`, so the
+first health check may take several minutes. MiniCPM5-1B loads on the first
+non-cached assessment. Model files persist in the `huggingface-cache` volume.
+
+Open <http://localhost:7860>.
+
+## Configuration
+
+Compose sets these required values:
 
 ```text
-openbmb/MiniCPM5-1B-GGUF
-MiniCPM5-1B-Q8_0.gguf
+MODEL_RUNTIME=transformers
+REQUIRE_CUDA=1
+HF_HOME=/root/.cache/huggingface
 ```
 
-Overrides:
+Optional `.env` values:
 
-```powershell
-$env:MODEL_REPO_ID = "openbmb/MiniCPM5-1B-GGUF"
-$env:MODEL_FILENAME = "MiniCPM5-1B-Q8_0.gguf"
-$env:MODEL_CONTEXT_SIZE = "8192"
-$env:MODEL_GPU_LAYERS = "0"
-$env:MODEL_ENABLE_THINKING = "0"
+```dotenv
+NOTICECHECK_PORT=7860
+TRANSFORMERS_MODEL_REPO=openbmb/MiniCPM5-1B
+MODEL_ENABLE_THINKING=0
+HF_TOKEN=
 ```
 
-Use `MODEL_PATH` for an existing GGUF. Schema-constrained generation is the
-default because it is more reliable for the application response contract.
-Set `MODEL_ENABLE_THINKING=1` only for experiments; it uses a larger token
-budget but still must produce schema-valid JSON.
+`REQUIRE_CUDA=1` prevents accidental CPU fallback. If Docker cannot expose the
+GPU, model status reports that CUDA is unavailable and startup fails while
+preloading OCR.
 
-Set `MODEL_GPU_LAYERS=-1` when using a locally built CUDA-enabled
-`llama-cpp-python` installation outside ZeroGPU.
+## Operations
 
-```powershell
-python -m pip install -r requirements-local.txt
-python app.py --download-model
-python app.py --test-endpoint
-python app.py
+View logs:
+
+```bash
+docker compose logs --follow noticecheck
 ```
 
-## ZeroGPU lifecycle
+Check the GPU from the application image:
 
-Inference runs inside `@spaces.GPU(duration=60)`. Nemotron OCR first extracts
-paragraph text from a screenshot, then the Transformers MiniCPM5-1B model
-assesses that text. Both Space models are cached in the ZeroGPU worker. Local
-runs use only the separate GGUF/llama.cpp path.
+```bash
+docker compose run --rm noticecheck python -c \
+  "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+```
 
-## Language limits
+Stop containers while retaining downloaded models:
 
-Nemotron OCR v2 officially supports English, Chinese, Japanese, Korean, and
-Russian. It does not officially support Urdu script. Roman Urdu uses Latin
-characters and may be readable, but accuracy is not guaranteed.
+```bash
+docker compose down
+```
 
-MiniCPM5-1B is officially evaluated in English and Chinese. Urdu and Roman Urdu
-reasoning/output are best effort and must be validated on this app's data.
+Delete containers and persistent model/trace data:
+
+```bash
+docker compose down --volumes
+```

@@ -54,7 +54,7 @@ def run_self_tests() -> None:
 
 def test_endpoint() -> None:
     if not model_status()["connected"]:
-        raise ModelRuntimeError("The local llama.cpp runtime is not ready.")
+        raise ModelRuntimeError("The configured local model runtime is not ready.")
     sample = (
         "PAKISTAN POST: Pay Rs. 85 now at http://pakpost-delivery.example/verify "
         "or your parcel will be destroyed today."
