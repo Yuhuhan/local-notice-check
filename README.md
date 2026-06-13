@@ -19,6 +19,8 @@ tags:
   - sponsor:nvidia
   - achievement:offgrid
   - achievement:offbrand
+  - achievement:sharing
+  - achievement:fieldnotes
   - transformers
   - minicpm5-1b
   - nemotron-parse
@@ -27,6 +29,7 @@ tags:
   - online-safety
   - pakistan
   - english
+
 short_description: Review suspicious Pakistani messages before you act.
 ---
 
@@ -41,6 +44,13 @@ on a local NVIDIA GPU.
 **[Try the live demo](https://huggingface.co/spaces/build-small-hackathon/noticecheck)**
 
 ![NoticeCheck demo](docs/app-demo.gif)
+
+## Project Links
+
+- [Live Hugging Face Space](https://huggingface.co/spaces/build-small-hackathon/noticecheck)
+- [LinkedIn project post](https://www.linkedin.com/posts/1abidaliawan_huggingfacehackathon-huggingface-ai-ugcPost-7471594790506192896--_53/)
+- [Demo GIF](docs/app-demo.gif)
+- [Privacy-safe trace dataset](https://huggingface.co/datasets/build-small-hackathon/pakistan-notice-helper-traces)
 
 NoticeCheck is a safety assistant for suspicious Pakistani messages, bills,
 bank alerts, challans, courier notices, and screenshots. It returns:
